@@ -128,7 +128,8 @@
 
   // ---------- Remplissage à partir de l'analyse ----------
   function analyser(texte) {
-    var r = L.extraire(texte);
+    // Le signataire et la personne qui suit l'affaire ne sont jamais le demandeur
+    var r = L.extraire(texte, { exclus: [reglages.signature.split('\n')[0], reglages.suiviPar.split(' - ')[0]] });
     $('designation').value = r.designation;
     $('numero').value = r.numero;
     $('typologie').value = r.typologie;

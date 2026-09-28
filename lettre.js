@@ -62,7 +62,9 @@
   var CIV = '(Monsieur|Madame|Mademoiselle|Messieurs|Mesdames|MM\\.?|Mmes\\.?|Mme\\.?|Mlle\\.?|M\\.)';
   // Nom : 1 à 3 mots commençant par une majuscule (particules autorisées)
   var NOM = "((?:(?:de|du|des|van|von|le|la|el|ben|d')\\s?)?[" + MAJ + "][" + LET + "-]+(?:\\s(?:(?:de|du|des|van|von|el|ben|d')\\s?)?[" + MAJ + "][" + LET + "-]+){0,2})";
-  var MOTS_EXCLUS = /^(le|la|les|l'|Directeur|Directrice|Maire|Pr[ée]sident|Pr[ée]fet|D[ée]put[ée]|S[ée]nat|Conseill|Adjoint|Ministre|Partenord|Le|La|Les|Je|Nous|Vous|Il|Elle|Ils|Elles|En|Par|Pour|Mon|Ma|Mes|Ce|Cette|Au|Aux)$/;
+  var MOTS_EXCLUS = /^(?:(?:le|la|les|l'|Le|La|Les|Je|Nous|Vous|Il|Elle|Ils|Elles|En|Par|Pour|Mon|Ma|Mes|Ce|Cette|Au|Aux|Et|Monsieur|Madame|Mademoiselle|Messieurs|Mesdames|Objet|Habitat)$|(?:Directeur|Directrice|Maire|Mairie|Pr[ée]sident|Pr[ée]f[eè]t|D[ée]put[ée]|S[ée]nat|Conseill|Adjoint|Ministre|D[ée]l[ée]gu[ée]|Partenord))/;
+  // Titre qui suit le nom d'un élu ou d'un destinataire : ce n'est pas le demandeur
+  var FONCTION_APRES = /^,?\s(?:(?:le|la|l')\s?)?(?:Directeur|Directrice|Maire|Pr[ée]sident|Pr[ée]f[eè]t|D[ée]put[ée]|S[ée]nat|Conseill|Adjoint|Ministre|D[ée]l[ée]gu[ée])/i;
 
   function civNorm(c) {
     c = c.replace(/\.$/, '');
@@ -101,15 +103,26 @@
   }
 
   // ---------- Demandeur(s) ----------
-  function extraireDemandeurs(t) {
+  function extraireDemandeurs(t, exclus) {
     var candidats = [];
     var re, m;
+    // On compare sur le nom de famille (dernier mot) des personnes à exclure
+    exclus = (exclus || []).map(function (n) { return n.trim().split(/\s+/).pop().toLowerCase(); })
+      .filter(function (n) { return n.length > 2; });
+    // Nom de l'élu, du destinataire (« à Monsieur … ») ou du signataire de la réponse
+    function horsSujet(debut, fin, noms) {
+      if (FONCTION_APRES.test(t.slice(fin, fin + 40))) return true;
+      if (/(?:^|\s)(?:à|A)\s$/.test(t.slice(Math.max(0, debut - 3), debut))) return true;
+      return noms.some(function (n) {
+        return n.toLowerCase().split(' ').some(function (w) { return exclus.indexOf(w) >= 0; });
+      });
+    }
 
     // "Monsieur Jean DUPONT et Madame Marie MARTIN" (noms différents)
     re = new RegExp(CIV + '\\s' + NOM + '\\set\\s' + CIV + '\\s' + NOM, 'g');
     while ((m = re.exec(t))) {
       var n1 = nettoyerNom(m[2]), n2 = nettoyerNom(m[4]);
-      if (!nomValide(n1) || !nomValide(n2)) continue;
+      if (!nomValide(n1) || !nomValide(n2) || horsSujet(m.index, m.index + m[0].length, [n1, n2])) continue;
       var c1 = civNorm(m[1]), c2 = civNorm(m[3]);
       var designation = n1 === n2 ? c1 + ' et ' + c2 + ' ' + n1 : c1 + ' ' + n1 + ' et ' + c2 + ' ' + n2;
       candidats.push({ designation: designation, nom: n1 === n2 ? n1 : '', profil: profilDepuisCivs([c1, c2]), personnes: 2, pos: m.index });
@@ -119,7 +132,7 @@
     re = new RegExp(CIV + '\\set\\s' + CIV + '\\s' + NOM, 'g');
     while ((m = re.exec(t))) {
       var nom = nettoyerNom(m[3]);
-      if (!nomValide(nom)) continue;
+      if (!nomValide(nom) || horsSujet(m.index, m.index + m[0].length, [nom])) continue;
       var a = civNorm(m[1]), b = civNorm(m[2]);
       candidats.push({ designation: a + ' et ' + b + ' ' + nom, nom: nom, profil: profilDepuisCivs([a, b]), personnes: 2, pos: m.index });
     }
@@ -128,7 +141,7 @@
     re = new RegExp(CIV + '\\s' + NOM, 'g');
     while ((m = re.exec(t))) {
       var nm = nettoyerNom(m[2]);
-      if (!nomValide(nm)) continue;
+      if (!nomValide(nm) || horsSujet(m.index, m.index + m[1].length + 1 + nm.length, [nm])) continue;
       var c = civNorm(m[1]);
       var p = profilDepuisCivs([c]);
       candidats.push({ designation: c + ' ' + nm, nom: nm, profil: p, personnes: PROFILS[p].pl ? 2 : 1, pos: m.index });
@@ -215,9 +228,10 @@
     return { fonction: 'autre', fem: false };
   }
 
-  function extraire(texteBrut) {
+  // options.exclus : noms à ne jamais retenir comme demandeur (ex. signataire de la réponse)
+  function extraire(texteBrut, options) {
     var t = normaliser(texteBrut);
-    var dem = extraireDemandeurs(t);
+    var dem = extraireDemandeurs(t, (options || {}).exclus);
     var typo = extraireTypologie(t);
     var lieu = extraireLieu(t, typo ? typo.index : null);
     var fct = extraireFonction(t);
