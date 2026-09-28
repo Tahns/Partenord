@@ -21,9 +21,11 @@ Outil web pour rédiger en quelques secondes la réponse à un courrier d'élu
 4. Copier le texte et le coller dans le PGI.
 
 Les réglages (Affaire suivie par, signature, agences avec adresse, horaires
-et communes rattachées) se font via le bouton « Réglages » et sont enregistrés
-dans le navigateur. Le bouton « Exporter les réglages » produit un fichier à
-transmettre aux collègues, qui l'ouvrent avec « Importer des réglages… ».
+et communes rattachées) se font via le bouton « Réglages ». Ils valent jusqu'à la
+fermeture de la page : le bouton « Exporter les réglages » produit un fichier à
+réimporter (« Importer des réglages… ») à la prochaine ouverture ou à transmettre
+aux collègues. Les valeurs par défaut sont écrites dans `app.js` (réponses logement)
+et `conciliation.js` (pouvoir).
 
 ## Confidentialité
 
@@ -32,6 +34,12 @@ et la rédaction se font entièrement dans le navigateur. Les programmes de lect
 et le dictionnaire français sont hébergés avec le site (dossier `vendor/`) : aucun
 service externe n'est appelé, et la politique de sécurité de la page (CSP)
 interdit au navigateur toute connexion vers un autre site.
+
+**Rien n'est conservé sur le poste** : ni courriers, ni champs, ni réglages, ni
+dictionnaire (aucun localStorage, IndexedDB, cache ou cookie). Tout disparaît à la
+fermeture ou au rechargement de la page ; les données laissées par d'anciennes
+versions du site sont effacées à l'ouverture. Seuls restent le texte copié dans le
+presse-papiers et les fichiers Word téléchargés, là où l'agent les a mis.
 
 ## Mise en ligne (GitHub Pages)
 

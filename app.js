@@ -15,13 +15,16 @@
       communes: ['Lille']
     }]
   };
-  var reglages;
-  try { reglages = Object.assign({}, DEFAUT, JSON.parse(localStorage.getItem('reponses-logement') || '{}')); }
-  catch (e) { reglages = Object.assign({}, DEFAUT); }
-  if (!Array.isArray(reglages.agences) || !reglages.agences.length) reglages.agences = DEFAUT.agences;
-  function sauver() {
-    try { localStorage.setItem('reponses-logement', JSON.stringify(reglages)); } catch (e) { /* stockage indisponible */ }
-  }
+  // Rien n'est conservé dans le navigateur : les réglages valent jusqu'à la fermeture de la page
+  // (pour les retrouver, les exporter puis les importer à la prochaine ouverture).
+  var reglages = JSON.parse(JSON.stringify(DEFAUT));
+
+  // Efface ce que d'anciennes versions du site avaient pu enregistrer sur le poste
+  try {
+    localStorage.removeItem('reponses-logement');
+    localStorage.removeItem('reponses-logement-vue');
+  } catch (e) { /* stockage indisponible */ }
+  try { if (window.indexedDB) indexedDB.deleteDatabase('keyval-store'); } catch (e) { /* idem */ }
 
   // ---------- Construction des contrôles ----------
   Object.keys(L.PROFILS).forEach(function (k, i) {
@@ -78,6 +81,7 @@
         workerPath: base + 'worker.min.js',
         corePath: base + 'core/',
         langPath: base + 'lang',
+        cacheMethod: 'none', // le dictionnaire n'est pas enregistré sur le poste
         logger: function (m) {
           if (m.status === 'recognizing text') etat('Lecture du courrier… <progress value="' + m.progress + '"></progress>');
         }
@@ -330,12 +334,11 @@
     $('vue-logement').hidden = v !== 'logement';
     $('vue-conciliation').hidden = v !== 'conciliation';
     document.querySelectorAll('.onglets button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.vue === v)); });
-    try { localStorage.setItem('reponses-logement-vue', v); } catch (e) { /* stockage indisponible */ }
   }
   document.querySelectorAll('.onglets button').forEach(function (b) {
     b.addEventListener('click', function () { afficherVue(b.dataset.vue); });
   });
-  try { afficherVue(localStorage.getItem('reponses-logement-vue')); } catch (e) { afficherVue('logement'); }
+  afficherVue('logement');
 
   // Lecture des fichiers partagée avec l'onglet Conciliations
   window.Lecture = { lireFichier: lireFichier };
@@ -373,7 +376,7 @@
     reglages.suiviPar = $('r-suivi').value;
     reglages.ville = $('r-ville').value.trim() || 'Lille';
     reglages.signature = $('r-signature').value.replace(/\s+$/, '') || DEFAUT.signature;
-    sauver(); maj();
+    maj();
   });
 
   // Partage des réglages entre collègues (fichier JSON)
@@ -395,7 +398,7 @@
       $('r-suivi').value = reglages.suiviPar;
       $('r-ville').value = reglages.ville;
       $('r-signature').value = reglages.signature;
-      sauver(); remplirAgences(); maj();
+      remplirAgences(); maj();
       $('r-message').textContent = '✓ Réglages importés (' + reglages.agences.length + ' agence' + (reglages.agences.length > 1 ? 's' : '') + ').';
     } catch (e) {
       $('r-message').textContent = 'Ce fichier n\'est pas un fichier de réglages valide.';
@@ -412,13 +415,13 @@
     var i = reglages.agences.findIndex(function (x) { return x.nom.toLowerCase() === a.nom.toLowerCase(); });
     if (i >= 0) reglages.agences[i] = a; else reglages.agences.push(a);
     ['a-nom', 'a-adresse', 'a-horaires', 'a-communes'].forEach(function (id) { $(id).value = ''; });
-    sauver(); remplirAgences(); maj();
+    remplirAgences(); maj();
   });
   $('liste-agences').addEventListener('click', function (e) {
     var t = e.target;
     if (t.dataset.suppr != null && reglages.agences.length > 1 && confirm('Supprimer cette agence ?')) {
       reglages.agences.splice(+t.dataset.suppr, 1);
-      sauver(); remplirAgences(); maj();
+      remplirAgences(); maj();
     }
     if (t.dataset.edit != null) {
       var a = reglages.agences[+t.dataset.edit];
