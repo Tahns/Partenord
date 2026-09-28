@@ -325,6 +325,7 @@
   document.addEventListener('dragover', function (e) { e.preventDefault(); });
   document.addEventListener('drop', function (e) {
     e.preventDefault();
+    if (document.body.classList.contains('verrouille')) return;
     if (!$('vue-logement').hidden && !drop.contains(e.target)) ajouterFichiers(e.dataTransfer.files);
   });
 

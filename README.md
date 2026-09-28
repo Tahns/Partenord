@@ -41,6 +41,15 @@ fermeture ou au rechargement de la page ; les données laissées par d'anciennes
 versions du site sont effacées à l'ouverture. Seuls restent le texte copié dans le
 presse-papiers et les fichiers Word téléchargés, là où l'agent les a mis.
 
+## Code d'accès
+
+Un code est demandé à chaque ouverture de la page (`verrou.js`, seule son empreinte
+SHA-256 y figure). C'est une simple barrière contre les visiteurs de passage : le code
+du site étant public, ce n'est pas une protection forte — le site ne contient de toute
+façon aucune donnée. Pour changer le code : calculer
+`node -e "console.log(require('crypto').createHash('sha256').update('partenord-courriers:NOUVEAUCODE').digest('hex'))"`
+et remplacer `EMPREINTE` dans `verrou.js`.
+
 ## Mise en ligne (GitHub Pages)
 
 1. Dans le dépôt GitHub : *Settings → Pages → Build and deployment → Source* : choisir **GitHub Actions**.
