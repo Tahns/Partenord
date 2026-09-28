@@ -171,7 +171,7 @@
   function extraireNumero(t) {
     // Supprime les espaces parasites de l'OCR à l'intérieur des nombres
     var s = t.replace(/(\d)[ .](?=\d)/g, '$1');
-    // Deux formes : chiffres + lettres (0590423808575GDPUB) ou uniquement des chiffres (059102384157559900)
+    // Deux formes : chiffres + lettres (0590000000015GDPUB) ou uniquement des chiffres (059100000000000044)
     var re = /\b(?:(0[0-9OSIlB]{11,14})\s?([A-Z]{3,6})|(0\d{15,19}))\b/g, m, best = null;
     while ((m = re.exec(s))) {
       var num = m[3] || m[1].replace(/O/g, '0').replace(/S/g, '5').replace(/[Il]/g, '1').replace(/B/g, '8') + m[2];
@@ -294,7 +294,7 @@
     return d[a.length][b.length];
   }
 
-  // Même nom écrit autrement ailleurs dans le courrier (« NASSERI Faridourm » / « NASSERI Faridoum ») :
+  // Même nom écrit autrement ailleurs dans le courrier (« RAHMANI Sarnir » / « RAHMANI Samir ») :
   // souvent une erreur de lecture, à signaler à l'agent
   function variantesNom(t, designation) {
     var mots = designation.split(' ').filter(function (w) { return w.length >= 4 && !MOTS_EXCLUS.test(w); });

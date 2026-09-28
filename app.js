@@ -66,7 +66,8 @@
 
   // ---------- Lecture du courrier ----------
   var worker = null;
-  function etat(html) { $('etat').innerHTML = html; }
+  // Message d'avancement dans l'onglet affiché
+  function etat(html) { ($('vue-logement').hidden ? $('c-etat') : $('etat')).innerHTML = html; }
 
   async function ocr(images) {
     if (!worker) {
@@ -316,9 +317,28 @@
     drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
   });
   drop.addEventListener('drop', function (e) { ajouterFichiers(e.dataTransfer.files); });
-  // Dépôt n'importe où sur la page
+  // Dépôt n'importe où sur la page (onglet Demandes de logement)
   document.addEventListener('dragover', function (e) { e.preventDefault(); });
-  document.addEventListener('drop', function (e) { e.preventDefault(); if (!drop.contains(e.target)) ajouterFichiers(e.dataTransfer.files); });
+  document.addEventListener('drop', function (e) {
+    e.preventDefault();
+    if (!$('vue-logement').hidden && !drop.contains(e.target)) ajouterFichiers(e.dataTransfer.files);
+  });
+
+  // Onglets : Demandes de logement / Conciliations
+  function afficherVue(v) {
+    if (v !== 'conciliation') v = 'logement';
+    $('vue-logement').hidden = v !== 'logement';
+    $('vue-conciliation').hidden = v !== 'conciliation';
+    document.querySelectorAll('.onglets button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.vue === v)); });
+    try { localStorage.setItem('reponses-logement-vue', v); } catch (e) { /* stockage indisponible */ }
+  }
+  document.querySelectorAll('.onglets button').forEach(function (b) {
+    b.addEventListener('click', function () { afficherVue(b.dataset.vue); });
+  });
+  try { afficherVue(localStorage.getItem('reponses-logement-vue')); } catch (e) { afficherVue('logement'); }
+
+  // Lecture des fichiers partagée avec l'onglet Conciliations
+  window.Lecture = { lireFichier: lireFichier };
 
   $('liste-courriers').addEventListener('click', function (e) {
     var b = e.target.closest('button');
