@@ -51,6 +51,7 @@ Je vous prie d'agréer, Monsieur le Maire, l'expression de ma considération dis
 
 
 Eric COJON
+Directeur Général
 #signature#`;
 const out = L.generer({ ...r, date: '25 Septembre 2026', reference: '12195', suiviPar: "Romy DOISNE -  Commerciale d'agence ",
   criteresTextes: ["près d'une station de métro"],
