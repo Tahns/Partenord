@@ -305,6 +305,9 @@
   }
 
   async function copierTexte(t) {
+    // Le PGI transforme chaque ligne vide en changement de paragraphe, avec un grand
+    // espace et un retrait : une espace insécable garde la ligne vide sans la couper.
+    t = t.split('\n').map(function (l) { return l.trim() ? l : '\u00a0'; }).join('\n');
     try {
       await navigator.clipboard.write([new ClipboardItem({
         'text/plain': new Blob([t], { type: 'text/plain' }),
