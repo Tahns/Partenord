@@ -115,45 +115,126 @@
     return ocr(images);
   }
 
-  async function traiterFichier(f) {
-    if (!f) return;
-    try {
-      etat('Ouverture de « ' + f.name.replace(/</g, '&lt;') + ' »…');
-      var texte = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)
-        ? await lirePdf(await f.arrayBuffer())
-        : await ocr([f]);
-      $('texte-source').value = texte;
-      // « Q_12192_0.pdf » -> Nos réf. : 12192
-      var ref = /(?:^|[^A-Za-z0-9])Q[_ -]?(\d{3,})/i.exec(f.name);
-      $('reference').value = ref ? ref[1] : '';
-      analyser(texte);
-      etat('<span style="color:var(--ok)">✓ Courrier lu. Vérifiez les champs surlignés.</span>');
-    } catch (e) {
-      console.error(e);
-      etat('<span style="color:var(--warn)">Impossible de lire ce fichier (' + String(e.message || e).replace(/</g, '&lt;') + '). Vous pouvez coller le texte ci-dessous.</span>');
-    }
+  // ---------- File de courriers ----------
+  // Chaque courrier déposé garde ses propres champs : passer de l'un à l'autre n'écrase rien.
+  var courriers = [], actif = -1, enCours = Promise.resolve();
+
+  function echapperHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function lireChamps() {
+    return {
+      designation: $('designation').value, numero: $('numero').value, typologie: $('typologie').value,
+      lieu: $('lieu').value, critereLibre: $('critere-libre').value, fonction: $('fonction').value,
+      nature: $('nature').value, agence: $('agence').value, reference: $('reference').value, date: $('date').value,
+      profil: document.querySelector('input[name=profil]:checked').value,
+      elu: document.querySelector('input[name=elu]:checked').value,
+      criteres: Array.prototype.map.call(document.querySelectorAll('#criteres input:checked'), function (cb) { return cb.value; }),
+      texte: $('texte-source').value, alerte: champsCourants.alerte || ''
+    };
+  }
+  var champsCourants = {};
+
+  function ecrireChamps(c) {
+    champsCourants = c;
+    ['designation', 'numero', 'typologie', 'lieu', 'fonction', 'nature', 'reference', 'date'].forEach(function (id) { $(id).value = c[id]; });
+    $('critere-libre').value = c.critereLibre;
+    if (reglages.agences[c.agence]) $('agence').value = c.agence;
+    document.querySelector('input[name=profil][value=' + c.profil + ']').checked = true;
+    document.querySelector('input[name=elu][value=' + c.elu + ']').checked = true;
+    document.querySelectorAll('#criteres input').forEach(function (cb) { cb.checked = c.criteres.indexOf(cb.value) >= 0; });
+    $('texte-source').value = c.texte;
+    $('alerte').textContent = c.alerte || '';
+    $('alerte').hidden = !c.alerte;
+    maj();
   }
 
-  // ---------- Remplissage à partir de l'analyse ----------
-  function analyser(texte) {
+  // Champs proposés pour un texte de courrier (sans toucher à la page)
+  function champsDepuisTexte(texte, nomFichier) {
     // Le signataire et la personne qui suit l'affaire ne sont jamais le demandeur
     var r = L.extraire(texte, { exclus: [reglages.signature.split('\n')[0], reglages.suiviPar.split(' - ')[0]] });
-    $('designation').value = r.designation;
-    $('numero').value = r.numero;
-    $('typologie').value = r.typologie;
-    $('lieu').value = r.lieu;
-    document.querySelector('input[name=profil][value=' + r.profil + ']').checked = true;
-    $('fonction').value = r.fonction;
-    document.querySelector('input[name=elu][value=' + (r.elueFem ? 'f' : 'm') + ']').checked = true;
-    $('nature').value = r.mutation ? 'mutation' : 'logement';
-    document.querySelectorAll('#criteres input').forEach(function (cb) { cb.checked = r.criteres.indexOf(cb.value) >= 0; });
-    $('critere-libre').value = '';
     // Agence rattachée à la commune souhaitée
+    var agence = $('agence').value;
     var lieu = (r.lieu || '').replace(/\s(?:ou|et)\s.*$/, '').toLowerCase();
     reglages.agences.forEach(function (a, i) {
-      if ((a.communes || []).some(function (c) { return c.trim().toLowerCase() === lieu; })) $('agence').value = i;
+      if ((a.communes || []).some(function (c) { return c.trim().toLowerCase() === lieu; })) agence = String(i);
     });
-    maj();
+    // « Q_12192_0.pdf » -> Nos réf. : 12192
+    var ref = nomFichier ? /(?:^|[^A-Za-z0-9])Q[_ -]?(\d{3,})/i.exec(nomFichier) : null;
+    return {
+      designation: r.designation, numero: r.numero, typologie: r.typologie, lieu: r.lieu, critereLibre: '',
+      fonction: r.fonction, nature: r.mutation ? 'mutation' : 'logement', agence: agence,
+      reference: ref ? ref[1] : (nomFichier ? '' : $('reference').value), date: $('date').value,
+      profil: r.profil, elu: r.elueFem ? 'f' : 'm', criteres: r.criteres, texte: texte,
+      alerte: r.variantes && r.variantes.length ? 'Orthographe à vérifier : le courrier écrit aussi « ' + r.variantes.join(' », « ') + ' ».' : ''
+    };
+  }
+
+  function afficherListe() {
+    var ul = $('liste-courriers');
+    $('bloc-courriers').hidden = courriers.length < 2 && !courriers.some(function (c) { return c.statut !== 'pret'; });
+    ul.innerHTML = '';
+    courriers.forEach(function (c, i) {
+      var li = document.createElement('li');
+      li.className = (i === actif ? 'actif ' : '') + c.statut + (c.copie ? ' copie' : '');
+      var nom = c.champs && c.champs.designation ? c.champs.designation : '';
+      var etatTxt = { lecture: 'lecture…', attente: 'en attente', erreur: 'illisible', pret: c.copie ? '✓ copié' : 'à traiter' }[c.statut];
+      li.innerHTML = '<button type="button" data-i="' + i + '"' + (c.statut === 'pret' || c.statut === 'erreur' ? '' : ' disabled') + '><b></b><span></span></button>' +
+        '<em>' + etatTxt + '</em><button type="button" class="suppr" data-suppr-courrier="' + i + '" aria-label="Retirer ce courrier">×</button>';
+      li.querySelector('b').textContent = c.nom;
+      li.querySelector('span').textContent = nom;
+      ul.appendChild(li);
+    });
+    var restants = courriers.filter(function (c) { return !c.copie; }).length;
+    $('compte-courriers').textContent = courriers.length + ' courrier' + (courriers.length > 1 ? 's' : '') + (restants ? ' — ' + restants + ' à traiter' : ' — tous copiés');
+  }
+
+  function ouvrir(i) {
+    if (actif >= 0 && courriers[actif] && courriers[actif].statut === 'pret') courriers[actif].champs = lireChamps();
+    actif = i;
+    var c = courriers[i];
+    if (c.statut === 'pret') {
+      ecrireChamps(c.champs);
+      etat('<span style="color:var(--ok)">✓ « ' + echapperHtml(c.nom) + ' » lu. Vérifiez les champs surlignés.</span>');
+    } else if (c.statut === 'erreur') {
+      etat('<span style="color:var(--warn)">Impossible de lire « ' + echapperHtml(c.nom) + ' » (' + echapperHtml(c.erreur) + '). Vous pouvez coller son texte ci-dessous.</span>');
+    }
+    afficherListe();
+  }
+
+  async function lireFichier(f) {
+    return /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name) ? lirePdf(await f.arrayBuffer()) : ocr([f]);
+  }
+
+  function ajouterFichiers(liste) {
+    Array.prototype.forEach.call(liste || [], function (f, rang) {
+      var c = { nom: f.name, statut: 'attente', copie: false };
+      courriers.push(c);
+      // Lecture l'une après l'autre (un seul moteur de lecture)
+      enCours = enCours.then(async function () {
+        c.statut = 'lecture'; afficherListe();
+        etat('Ouverture de « ' + echapperHtml(f.name) + ' »…');
+        try {
+          var texte = await lireFichier(f);
+          c.champs = champsDepuisTexte(texte, f.name);
+          c.statut = 'pret';
+        } catch (e) {
+          console.error(e);
+          c.statut = 'erreur'; c.erreur = String(e.message || e);
+        }
+        var idx = courriers.indexOf(c);
+        // Le premier courrier de chaque dépôt s'affiche ; les suivants attendent dans la liste
+        if (idx >= 0 && (rang === 0 || actif < 0 || !courriers[actif] || courriers[actif].statut !== 'pret')) ouvrir(idx);
+        else { afficherListe(); etat('<span style="color:var(--ok)">✓ « ' + echapperHtml(f.name) + ' » lu : cliquez dessus dans la liste pour l\'afficher.</span>'); }
+      });
+    });
+    afficherListe();
+  }
+
+  // ---------- Remplissage à partir d'un texte collé ----------
+  function analyser(texte) {
+    var c = champsDepuisTexte(texte, null);
+    ecrireChamps(c);
+    if (actif >= 0 && courriers[actif]) { courriers[actif].champs = c; courriers[actif].statut = 'pret'; afficherListe(); }
   }
 
   // ---------- Génération ----------
@@ -219,6 +300,7 @@
       document.execCommand('copy'); ta.remove();
     }
     $('copie-ok').textContent = '✓ Copié';
+    if (actif >= 0 && courriers[actif] && partie !== 'objet') { courriers[actif].copie = true; afficherListe(); }
     setTimeout(function () { $('copie-ok').textContent = ''; }, 2000);
   }
 
@@ -226,18 +308,29 @@
   var drop = $('drop');
   drop.addEventListener('click', function () { $('fichier').click(); });
   drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fichier').click(); } });
-  $('fichier').addEventListener('change', function () { traiterFichier(this.files[0]); this.value = ''; });
+  $('fichier').addEventListener('change', function () { ajouterFichiers(this.files); this.value = ''; });
   ['dragenter', 'dragover'].forEach(function (ev) {
     drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
   });
   ['dragleave', 'drop'].forEach(function (ev) {
     drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
   });
-  drop.addEventListener('drop', function (e) { traiterFichier(e.dataTransfer.files[0]); });
+  drop.addEventListener('drop', function (e) { ajouterFichiers(e.dataTransfer.files); });
   // Dépôt n'importe où sur la page
   document.addEventListener('dragover', function (e) { e.preventDefault(); });
-  document.addEventListener('drop', function (e) { e.preventDefault(); if (e.target !== drop) traiterFichier(e.dataTransfer.files[0]); });
+  document.addEventListener('drop', function (e) { e.preventDefault(); if (!drop.contains(e.target)) ajouterFichiers(e.dataTransfer.files); });
 
+  $('liste-courriers').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.supprCourrier != null) {
+      var i = +b.dataset.supprCourrier;
+      if (courriers[i].statut === 'lecture' || courriers[i].statut === 'attente') return;
+      courriers.splice(i, 1);
+      if (actif === i) actif = -1; else if (actif > i) actif--;
+      afficherListe();
+    } else if (b.dataset.i != null) ouvrir(+b.dataset.i);
+  });
   $('btn-analyser').addEventListener('click', function () { analyser($('texte-source').value); });
   document.querySelector('main').addEventListener('input', maj);
   document.querySelector('main').addEventListener('change', maj);
