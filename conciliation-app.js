@@ -95,12 +95,7 @@
   }
 
   async function copier() {
-    var t = C.pouvoirTexte(donnees(false));
-    try { await navigator.clipboard.writeText(t); }
-    catch (e) {
-      var ta = document.createElement('textarea');
-      ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
-    }
+    await window.Presse.copierTexte(C.pouvoirTexte(donnees(false)));
     ok('✓ Copié');
   }
 
