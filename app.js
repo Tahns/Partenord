@@ -296,27 +296,35 @@
     return t;
   }
 
-  // Copie en texte brut et en HTML : tout le courrier tient dans un seul paragraphe et
-  // chaque ligne est un simple retour à la ligne (<br>), car l'éditeur du PGI ajoute un
-  // grand espace après chaque paragraphe au collage.
-  function versHtml(t) {
-    return '<p style="margin:0;font-family:Roboto,Arial,sans-serif;font-size:11pt">' +
-      t.split('\n').map(echapper).join('<br>') + '</p>';
+  // Copie en texte brut et en HTML. Dans la version HTML, chaque ligne est un bloc <div>
+  // justifié sans marge (le PGI ajoute un grand espace après les <p> et les lignes vides) ;
+  // pour une lettre, la date et la signature sont décalées vers la droite.
+  var DECALAGE = '9cm';
+  function versHtml(t, lettre) {
+    var lignes = t.split('\n');
+    var debutSignature = lignes.length;
+    if (lettre) while (debutSignature > 0 && lignes[debutSignature - 1].trim()) debutSignature--;
+    return '<div style="font-family:Roboto,Arial,sans-serif;font-size:11pt">' + lignes.map(function (l, i) {
+      var decale = lettre && (i >= debutSignature || (i === 0 && /, le /.test(l)));
+      var style = 'margin-top:0;margin-bottom:0;text-indent:0;' +
+        (decale ? 'text-align:left;margin-left:' + DECALAGE : 'text-align:justify');
+      return '<div style="' + style + '">' + (l.trim() ? echapper(l) : '&nbsp;') + '</div>';
+    }).join('') + '</div>';
   }
 
-  async function copierTexte(t) {
+  async function copierTexte(t, lettre) {
     // Le PGI transforme chaque ligne vide en changement de paragraphe, avec un grand
     // espace et un retrait : une espace insécable garde la ligne vide sans la couper.
     t = t.split('\n').map(function (l) { return l.trim() ? l : '\u00a0'; }).join('\n');
     try {
       await navigator.clipboard.write([new ClipboardItem({
         'text/plain': new Blob([t], { type: 'text/plain' }),
-        'text/html': new Blob([versHtml(t)], { type: 'text/html' })
+        'text/html': new Blob([versHtml(t, lettre)], { type: 'text/html' })
       })]);
     } catch (e) {
       var ecrire = function (ev) {
         ev.clipboardData.setData('text/plain', t);
-        ev.clipboardData.setData('text/html', versHtml(t));
+        ev.clipboardData.setData('text/html', versHtml(t, lettre));
         ev.preventDefault();
       };
       document.addEventListener('copy', ecrire);
@@ -326,7 +334,7 @@
   }
 
   async function copier(partie) {
-    await copierTexte(texteFinal(partie));
+    await copierTexte(texteFinal(partie), partie !== 'objet');
     $('copie-ok').textContent = '✓ Copié';
     if (actif >= 0 && courriers[actif] && partie !== 'objet') { courriers[actif].copie = true; afficherListe(); }
     setTimeout(function () { $('copie-ok').textContent = ''; }, 2000);
