@@ -296,12 +296,12 @@
     return t;
   }
 
-  // Copie en texte brut et en HTML : chaque ligne devient un paragraphe sans marge,
-  // pour que l'éditeur du PGI ne rajoute pas d'espace entre les lignes au collage.
+  // Copie en texte brut et en HTML : tout le courrier tient dans un seul paragraphe et
+  // chaque ligne est un simple retour à la ligne (<br>), car l'éditeur du PGI ajoute un
+  // grand espace après chaque paragraphe au collage.
   function versHtml(t) {
-    return '<div style="font-family:Roboto,Arial,sans-serif;font-size:11pt">' + t.split('\n').map(function (l) {
-      return '<p style="margin:0;line-height:normal">' + (l ? echapper(l) : '&nbsp;') + '</p>';
-    }).join('') + '</div>';
+    return '<p style="margin:0;font-family:Roboto,Arial,sans-serif;font-size:11pt">' +
+      t.split('\n').map(echapper).join('<br>') + '</p>';
   }
 
   async function copierTexte(t) {
