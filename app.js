@@ -18,6 +18,7 @@
   var reglages;
   try { reglages = Object.assign({}, DEFAUT, JSON.parse(localStorage.getItem('reponses-logement') || '{}')); }
   catch (e) { reglages = Object.assign({}, DEFAUT); }
+  if (!Array.isArray(reglages.agences) || !reglages.agences.length) reglages.agences = DEFAUT.agences;
   function sauver() {
     try { localStorage.setItem('reponses-logement', JSON.stringify(reglages)); } catch (e) { /* stockage indisponible */ }
   }
@@ -70,8 +71,12 @@
   async function ocr(images) {
     if (!worker) {
       etat('Chargement de la reconnaissance de texte (première fois : quelques secondes)… <progress></progress>');
+      // Tout est servi par le site lui-même (dossier vendor/) : aucun appel à un service externe
+      var base = new URL('vendor/tesseract/', document.baseURI).href;
       worker = await Tesseract.createWorker('fra', 1, {
-        langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/fra/4.0.0_best_int',
+        workerPath: base + 'worker.min.js',
+        corePath: base + 'core/',
+        langPath: base + 'lang',
         logger: function (m) {
           if (m.status === 'recognizing text') etat('Lecture du courrier… <progress value="' + m.progress + '"></progress>');
         }
@@ -87,7 +92,7 @@
   }
 
   async function lirePdf(buffer) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
     var pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
     var nb = Math.min(pdf.numPages, 5);
     var texte = '', pages = [];
@@ -118,6 +123,9 @@
         ? await lirePdf(await f.arrayBuffer())
         : await ocr([f]);
       $('texte-source').value = texte;
+      // « Q_12192_0.pdf » -> Nos réf. : 12192
+      var ref = /(?:^|[^A-Za-z0-9])Q[_ -]?(\d{3,})/i.exec(f.name);
+      $('reference').value = ref ? ref[1] : '';
       analyser(texte);
       etat('<span style="color:var(--ok)">✓ Courrier lu. Vérifiez les champs surlignés.</span>');
     } catch (e) {
@@ -128,7 +136,8 @@
 
   // ---------- Remplissage à partir de l'analyse ----------
   function analyser(texte) {
-    var r = L.extraire(texte);
+    // Le signataire et la personne qui suit l'affaire ne sont jamais le demandeur
+    var r = L.extraire(texte, { exclus: [reglages.signature.split('\n')[0], reglages.suiviPar.split(' - ')[0]] });
     $('designation').value = r.designation;
     $('numero').value = r.numero;
     $('typologie').value = r.typologie;
@@ -140,7 +149,7 @@
     document.querySelectorAll('#criteres input').forEach(function (cb) { cb.checked = r.criteres.indexOf(cb.value) >= 0; });
     $('critere-libre').value = '';
     // Agence rattachée à la commune souhaitée
-    var lieu = (r.lieu || '').toLowerCase();
+    var lieu = (r.lieu || '').replace(/\s(?:ou|et)\s.*$/, '').toLowerCase();
     reglages.agences.forEach(function (a, i) {
       if ((a.communes || []).some(function (c) { return c.trim().toLowerCase() === lieu; })) $('agence').value = i;
     });
@@ -151,9 +160,10 @@
   var S = '\u0001', E = '\u0002';
   function donnees(marquer) {
     var w = function (v) { v = v.trim(); return marquer && v ? S + v + E : v; };
-    var crit = [];
+    var crit = [], critLog = [];
     document.querySelectorAll('#criteres input:checked').forEach(function (cb) {
-      crit.push(L.CRITERES.filter(function (c) { return c.id === cb.value; })[0].texte);
+      var c = L.CRITERES.filter(function (x) { return x.id === cb.value; })[0];
+      (c.logement ? critLog : crit).push(c.texte);
     });
     if ($('critere-libre').value.trim()) crit.push($('critere-libre').value.trim());
     return {
@@ -163,6 +173,7 @@
       typologie: w($('typologie').value),
       lieu: w($('lieu').value),
       criteresTextes: crit.map(w),
+      criteresLogement: critLog.map(w),
       fonction: $('fonction').value,
       elueFem: document.querySelector('input[name=elu]:checked').value === 'f',
       mutation: $('nature').value === 'mutation',
@@ -240,13 +251,42 @@
     $('r-suivi').value = reglages.suiviPar;
     $('r-ville').value = reglages.ville;
     $('r-signature').value = reglages.signature;
+    $('r-message').textContent = '';
     dlg.showModal();
   });
-  $('r-fermer').addEventListener('click', function () {
+  // Enregistré à chaque fermeture, y compris avec la touche Échap
+  $('r-fermer').addEventListener('click', function () { dlg.close(); });
+  dlg.addEventListener('close', function () {
     reglages.suiviPar = $('r-suivi').value;
     reglages.ville = $('r-ville').value.trim() || 'Lille';
     reglages.signature = $('r-signature').value.replace(/\s+$/, '') || DEFAUT.signature;
-    sauver(); dlg.close(); maj();
+    sauver(); maj();
+  });
+
+  // Partage des réglages entre collègues (fichier JSON)
+  $('r-exporter').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(reglages, null, 2)], { type: 'application/json' }));
+    a.download = 'reglages-reponses-logement.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+  $('r-importer').addEventListener('click', function () { $('r-fichier').click(); });
+  $('r-fichier').addEventListener('change', async function () {
+    var f = this.files[0]; this.value = '';
+    if (!f) return;
+    try {
+      var r = JSON.parse(await f.text());
+      if (!r || !Array.isArray(r.agences) || !r.agences.length || !r.agences.every(function (a) { return a && typeof a.nom === 'string'; })) throw new Error('format');
+      reglages = Object.assign({}, DEFAUT, r);
+      $('r-suivi').value = reglages.suiviPar;
+      $('r-ville').value = reglages.ville;
+      $('r-signature').value = reglages.signature;
+      sauver(); remplirAgences(); maj();
+      $('r-message').textContent = '✓ Réglages importés (' + reglages.agences.length + ' agence' + (reglages.agences.length > 1 ? 's' : '') + ').';
+    } catch (e) {
+      $('r-message').textContent = 'Ce fichier n\'est pas un fichier de réglages valide.';
+    }
   });
   $('a-enregistrer').addEventListener('click', function () {
     var a = {
