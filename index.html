@@ -107,6 +107,7 @@
   #lettre .trou { background: #ffd6d6; color: #8a1111; border-radius: 3px; }
   details { margin-top: 12px; }
   summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+  details.essais { margin: 0 0 12px; }
   details textarea { min-height: 160px; font-size: 12px; margin-top: 8px; }
   .aide { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .agence-ligne { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start;
@@ -253,6 +254,16 @@
         <button type="button" data-copie="objet">Copier l'objet</button>
         <span class="ok" id="copie-ok" aria-live="polite"></span>
       </div>
+      <details class="essais">
+        <summary>Essais de collage dans le logiciel (mise en page)</summary>
+        <p class="aide">Chaque bouton copie tout le courrier dans un format différent. Collez-les un par un dans le logiciel et notez celui qui donne la bonne mise en page.</p>
+        <div class="actions">
+          <button type="button" data-essai="actuel">A — format actuel</button>
+          <button type="button" data-essai="word">B — comme depuis Word</button>
+          <button type="button" data-essai="texte">C — texte seul</button>
+          <button type="button" data-essai="gauche">D — aligné à gauche, sans justification</button>
+        </div>
+      </details>
       <div id="lettre"></div>
       <p class="aide">Surligné en vert : informations reprises du courrier. En rouge : information manquante à compléter.</p>
     </div>

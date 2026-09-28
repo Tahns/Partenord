@@ -300,39 +300,70 @@
   // paragraphe (<p>), pour que le PGI justifie le texte sans étirer la dernière ligne ;
   // ses marges sont écrites en cm, sinon le PGI ajoute son grand espace entre paragraphes.
   // Pour une lettre, la date et la signature sont décalées vers la droite.
+  // Les variantes B, C et D (encadré « Essais de collage ») servent à trouver le format
+  // que le PGI respecte.
   var DECALAGE = '9cm';
-  function versHtml(t, lettre) {
-    var lignes = t.split('\n');
+  function aDecaler(lignes, lettre) {
     var debutSignature = lignes.length;
     if (lettre) while (debutSignature > 0 && lignes[debutSignature - 1].trim()) debutSignature--;
+    return function (l, i) { return lettre && (i >= debutSignature || (i === 0 && /, le /.test(l))); };
+  }
+
+  function versHtml(t, lettre, variante) {
+    var lignes = t.split('\n');
+    var decale = aDecaler(lignes, lettre);
+    var police = 'font-family:Roboto,Arial,sans-serif;font-size:11pt;';
+    if (variante === 'word') {
+      // Même forme que le HTML copié depuis Word
+      return '<html><head><meta charset="utf-8"><style>p.MsoNormal{margin:0cm;margin-bottom:.0001pt;' + police + '}</style></head><body>' +
+        lignes.map(function (l, i) {
+          return '<p class="MsoNormal" style="margin:0cm;margin-bottom:.0001pt;text-align:' + (decale(l, i) ? 'left;margin-left:' + DECALAGE : 'justify') + '">' +
+            (l.trim() ? echapper(l) : '&nbsp;') + '<o:p></o:p></p>';
+        }).join('') + '</body></html>';
+    }
+    if (variante === 'gauche') {
+      // Un seul paragraphe aligné à gauche ; date et signature décalées par des tabulations
+      return '<p style="margin:0cm;text-align:left;' + police + '">' + lignes.map(function (l, i) {
+        return (decale(l, i) ? '<span style="mso-tab-count:7;white-space:pre">\t\t\t\t\t\t\t</span>' : '') + echapper(l);
+      }).join('<br>') + '</p>';
+    }
     return lignes.map(function (l, i) {
-      var decale = lettre && (i >= debutSignature || (i === 0 && /, le /.test(l)));
-      var style = 'margin:0cm;margin-top:0cm;margin-bottom:0cm;text-indent:0cm;line-height:normal;' +
-        'font-family:Roboto,Arial,sans-serif;font-size:11pt;' +
-        (decale ? 'text-align:left;margin-left:' + DECALAGE : 'text-align:justify');
+      var style = 'margin:0cm;margin-top:0cm;margin-bottom:0cm;text-indent:0cm;line-height:normal;' + police +
+        (decale(l, i) ? 'text-align:left;margin-left:' + DECALAGE : 'text-align:justify');
       return '<p style="' + style + '">' + (l.trim() ? echapper(l) : '&nbsp;') + '</p>';
     }).join('');
   }
 
-  async function copierTexte(t, lettre) {
+  async function copierTexte(t, lettre, variante) {
     // Le PGI transforme chaque ligne vide en changement de paragraphe, avec un grand
     // espace et un retrait : une espace insécable garde la ligne vide sans la couper.
     t = t.split('\n').map(function (l) { return l.trim() ? l : '\u00a0'; }).join('\n');
-    try {
-      await navigator.clipboard.write([new ClipboardItem({
-        'text/plain': new Blob([t], { type: 'text/plain' }),
-        'text/html': new Blob([versHtml(t, lettre)], { type: 'text/html' })
-      })]);
-    } catch (e) {
-      var ecrire = function (ev) {
-        ev.clipboardData.setData('text/plain', t);
-        ev.clipboardData.setData('text/html', versHtml(t, lettre));
-        ev.preventDefault();
-      };
-      document.addEventListener('copy', ecrire);
-      document.execCommand('copy');
-      document.removeEventListener('copy', ecrire);
+    var formats = { 'text/plain': t };
+    if (variante === 'texte') {
+      // Texte seul, lignes séparées par le séparateur de paragraphe Unicode
+      formats['text/plain'] = t.split('\n').join('\u2029');
+    } else {
+      if (variante === 'gauche') {
+        var lignes = t.split('\n'), decale = aDecaler(lignes, lettre);
+        formats['text/plain'] = lignes.map(function (l, i) { return (decale(l, i) ? '\t\t\t\t\t\t\t' : '') + l; }).join('\n');
+      }
+      formats['text/html'] = versHtml(t, lettre, variante);
     }
+    // Écriture par l'événement « copy » d'abord : le HTML y est copié tel quel, alors que
+    // navigator.clipboard.write le réécrit.
+    var fait = false;
+    var ecrire = function (ev) {
+      Object.keys(formats).forEach(function (k) { ev.clipboardData.setData(k, formats[k]); });
+      ev.preventDefault();
+      fait = true;
+    };
+    document.addEventListener('copy', ecrire);
+    try { document.execCommand('copy'); } catch (e) { /* repli ci-dessous */ }
+    document.removeEventListener('copy', ecrire);
+    if (fait) return;
+    var items = {};
+    Object.keys(formats).forEach(function (k) { items[k] = new Blob([formats[k]], { type: k }); });
+    await navigator.clipboard.write([new ClipboardItem(items)]);
   }
 
   async function copier(partie) {
@@ -394,6 +425,13 @@
   document.querySelector('main').addEventListener('change', maj);
   document.querySelectorAll('[data-copie]').forEach(function (b) {
     b.addEventListener('click', function () { copier(b.dataset.copie); });
+  });
+  document.querySelectorAll('[data-essai]').forEach(function (b) {
+    b.addEventListener('click', async function () {
+      await copierTexte(texteFinal('tout'), true, b.dataset.essai);
+      $('copie-ok').textContent = '✓ Copié (essai ' + b.textContent.trim().charAt(0) + ')';
+      setTimeout(function () { $('copie-ok').textContent = ''; }, 2000);
+    });
   });
 
   // Réglages
