@@ -118,7 +118,7 @@
   ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   // Dépôt n'importe où dans l'onglet
   document.addEventListener('drop', function (e) {
-    if (!$('vue-conciliation').hidden && e.dataTransfer && e.dataTransfer.files.length) traiter(e.dataTransfer.files[0]);
+    if (!document.body.classList.contains('verrouille') && !$('vue-conciliation').hidden && e.dataTransfer && e.dataTransfer.files.length) traiter(e.dataTransfer.files[0]);
   });
   $('c-analyser').addEventListener('click', function () { analyser($('c-texte').value); });
   $('vue-conciliation').addEventListener('input', maj);
