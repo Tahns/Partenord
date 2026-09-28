@@ -296,20 +296,22 @@
     return t;
   }
 
-  // Copie en texte brut et en HTML. Dans la version HTML, chaque ligne est un bloc <div>
-  // justifié sans marge (le PGI ajoute un grand espace après les <p> et les lignes vides) ;
-  // pour une lettre, la date et la signature sont décalées vers la droite.
+  // Copie en texte brut et en HTML. Dans la version HTML, chaque ligne est un vrai
+  // paragraphe (<p>), pour que le PGI justifie le texte sans étirer la dernière ligne ;
+  // ses marges sont écrites en cm, sinon le PGI ajoute son grand espace entre paragraphes.
+  // Pour une lettre, la date et la signature sont décalées vers la droite.
   var DECALAGE = '9cm';
   function versHtml(t, lettre) {
     var lignes = t.split('\n');
     var debutSignature = lignes.length;
     if (lettre) while (debutSignature > 0 && lignes[debutSignature - 1].trim()) debutSignature--;
-    return '<div style="font-family:Roboto,Arial,sans-serif;font-size:11pt">' + lignes.map(function (l, i) {
+    return lignes.map(function (l, i) {
       var decale = lettre && (i >= debutSignature || (i === 0 && /, le /.test(l)));
-      var style = 'margin-top:0;margin-bottom:0;text-indent:0;' +
+      var style = 'margin:0cm;margin-top:0cm;margin-bottom:0cm;text-indent:0cm;line-height:normal;' +
+        'font-family:Roboto,Arial,sans-serif;font-size:11pt;' +
         (decale ? 'text-align:left;margin-left:' + DECALAGE : 'text-align:justify');
-      return '<div style="' + style + '">' + (l.trim() ? echapper(l) : '&nbsp;') + '</div>';
-    }).join('') + '</div>';
+      return '<p style="' + style + '">' + (l.trim() ? echapper(l) : '&nbsp;') + '</p>';
+    }).join('');
   }
 
   async function copierTexte(t, lettre) {
