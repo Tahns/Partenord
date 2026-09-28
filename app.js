@@ -7,7 +7,7 @@
   var DEFAUT = {
     suiviPar: "Romy DOISNE - Commerciale d'agence",
     ville: 'Lille',
-    signature: 'Eric COJON\n#signature#',
+    signature: 'Eric COJON\nDirecteur Général\n#signature#',
     agences: [{
       nom: 'Lille',
       adresse: '2 bis rue Georges Courteline à Lille',
@@ -19,8 +19,6 @@
   try { reglages = Object.assign({}, DEFAUT, JSON.parse(localStorage.getItem('reponses-logement') || '{}')); }
   catch (e) { reglages = Object.assign({}, DEFAUT); }
   if (!Array.isArray(reglages.agences) || !reglages.agences.length) reglages.agences = DEFAUT.agences;
-  // Ancienne signature par défaut : seul #signature# suit le nom
-  if (reglages.signature === 'Eric COJON\nDirecteur Général\n#signature#') reglages.signature = DEFAUT.signature;
   function sauver() {
     try { localStorage.setItem('reponses-logement', JSON.stringify(reglages)); } catch (e) { /* stockage indisponible */ }
   }
