@@ -123,6 +123,9 @@
         ? await lirePdf(await f.arrayBuffer())
         : await ocr([f]);
       $('texte-source').value = texte;
+      // « Q_12192_0.pdf » -> Nos réf. : 12192
+      var ref = /(?:^|[^A-Za-z0-9])Q[_ -]?(\d{3,})/i.exec(f.name);
+      $('reference').value = ref ? ref[1] : '';
       analyser(texte);
       etat('<span style="color:var(--ok)">✓ Courrier lu. Vérifiez les champs surlignés.</span>');
     } catch (e) {
@@ -157,9 +160,10 @@
   var S = '\u0001', E = '\u0002';
   function donnees(marquer) {
     var w = function (v) { v = v.trim(); return marquer && v ? S + v + E : v; };
-    var crit = [];
+    var crit = [], critLog = [];
     document.querySelectorAll('#criteres input:checked').forEach(function (cb) {
-      crit.push(L.CRITERES.filter(function (c) { return c.id === cb.value; })[0].texte);
+      var c = L.CRITERES.filter(function (x) { return x.id === cb.value; })[0];
+      (c.logement ? critLog : crit).push(c.texte);
     });
     if ($('critere-libre').value.trim()) crit.push($('critere-libre').value.trim());
     return {
@@ -169,6 +173,7 @@
       typologie: w($('typologie').value),
       lieu: w($('lieu').value),
       criteresTextes: crit.map(w),
+      criteresLogement: critLog.map(w),
       fonction: $('fonction').value,
       elueFem: document.querySelector('input[name=elu]:checked').value === 'f',
       mutation: $('nature').value === 'mutation',
