@@ -296,14 +296,34 @@
     return t;
   }
 
-  async function copier(partie) {
-    var t = texteFinal(partie);
-    try { await navigator.clipboard.writeText(t); }
-    catch (e) {
-      var ta = document.createElement('textarea');
-      ta.value = t; document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); ta.remove();
+  // Copie en texte brut et en HTML : chaque ligne devient un paragraphe sans marge,
+  // pour que l'éditeur du PGI ne rajoute pas d'espace entre les lignes au collage.
+  function versHtml(t) {
+    return '<div style="font-family:Roboto,Arial,sans-serif;font-size:11pt">' + t.split('\n').map(function (l) {
+      return '<p style="margin:0;line-height:normal">' + (l ? echapper(l) : '&nbsp;') + '</p>';
+    }).join('') + '</div>';
+  }
+
+  async function copierTexte(t) {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/plain': new Blob([t], { type: 'text/plain' }),
+        'text/html': new Blob([versHtml(t)], { type: 'text/html' })
+      })]);
+    } catch (e) {
+      var ecrire = function (ev) {
+        ev.clipboardData.setData('text/plain', t);
+        ev.clipboardData.setData('text/html', versHtml(t));
+        ev.preventDefault();
+      };
+      document.addEventListener('copy', ecrire);
+      document.execCommand('copy');
+      document.removeEventListener('copy', ecrire);
     }
+  }
+
+  async function copier(partie) {
+    await copierTexte(texteFinal(partie));
     $('copie-ok').textContent = '✓ Copié';
     if (actif >= 0 && courriers[actif] && partie !== 'objet') { courriers[actif].copie = true; afficherListe(); }
     setTimeout(function () { $('copie-ok').textContent = ''; }, 2000);
@@ -343,6 +363,7 @@
 
   // Lecture des fichiers partagée avec l'onglet Conciliations
   window.Lecture = { lireFichier: lireFichier };
+  window.Presse = { copierTexte: copierTexte };
 
   $('liste-courriers').addEventListener('click', function (e) {
     var b = e.target.closest('button');
