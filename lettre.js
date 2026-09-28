@@ -29,17 +29,19 @@
   };
 
   // ---------- Critères de recherche fréquents ----------
+  // logement: true -> placé juste après le type (« de type 2 avec ascenseur à Lille »),
+  // sinon après la commune (« à Lille près d'une station de métro »)
   var CRITERES = [
     { id: 'metro',   texte: "près d'une station de métro",            re: /\bm[ée]tro\b/i },
     { id: 'tram',    texte: "près d'une station de tramway",          re: /tram/i },
     { id: 'bus',     texte: 'bien desservi par les transports en commun', re: /\bbus\b|transports? en commun/i },
-    { id: 'rdc',     texte: 'en rez-de-chaussée',                     re: /rez[\s-]de[\s-]chauss/i },
-    { id: 'asc',     texte: 'desservi par un ascenseur',              re: /ascenseur/i },
-    { id: 'pmr',     texte: 'adapté à une personne à mobilité réduite', re: /mobilit[ée] r[ée]duite|\bPMR\b|fauteuil roulant|handicap/i },
+    { id: 'rdc',     texte: 'en rez-de-chaussée',                     logement: true, re: /rez[\s-]de[\s-]chauss/i },
+    { id: 'asc',     texte: 'avec ascenseur',                         logement: true, re: /ascenseur/i },
+    { id: 'pmr',     texte: 'adapté à une personne à mobilité réduite', logement: true, re: /mobilit[ée] r[ée]duite|\bPMR\b|fauteuil roulant|handicap/i },
     { id: 'ecole',   texte: 'à proximité des écoles',                 re: /[ée]coles?\b|scolaris/i },
-    { id: 'jardin',  texte: 'avec jardin',                            re: /jardin/i },
-    { id: 'maison',  texte: 'en maison individuelle',                 re: /\bmaisons?\b(?! de (?:quartier|retraite|sant[ée]|la))/i },
-    { id: 'ext',     texte: 'avec un extérieur',                      re: /\bext[ée]rieur\b|balcon|terrasse/i }
+    { id: 'jardin',  texte: 'avec jardin',                            logement: true, re: /jardin/i },
+    { id: 'maison',  texte: 'en maison individuelle',                 logement: true, re: /\bmaisons?\b(?! de (?:quartier|retraite|sant[ée]|la))/i },
+    { id: 'ext',     texte: 'avec un extérieur',                      logement: true, re: /\bext[ée]rieur\b|balcon|terrasse/i }
   ];
 
   var MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
@@ -308,6 +310,13 @@
     return liste.slice(0, -1).join(', ') + ' et ' + liste[liste.length - 1];
   }
 
+  // « en maison individuelle avec un extérieur », « en rez-de-chaussée avec ascenseur »
+  function joindreLogement(liste) {
+    var avec = liste.filter(function (c) { return /^\u0001?avec\s/.test(c); });
+    var autres = liste.filter(function (c) { return avec.indexOf(c) < 0; });
+    return [joindre(autres), joindre(avec)].filter(Boolean).join(' ');
+  }
+
   function generer(d) {
     var p = PROFILS[d.profil] || PROFILS.MF;
     var D = (d.designation || '').trim() || '[DEMANDEUR]';
@@ -322,15 +331,13 @@
     var nature = d.mutation ? 'mutation' : 'logement';
     var typo = (d.typologie || '').trim() || '[TYPE]';
     var lieu = (d.lieu || '').trim();
-    var crit = (d.criteresTextes || []).filter(Boolean);
+    var crit = (d.criteresTextes || []).filter(Boolean);            // après la commune
+    var critLog = (d.criteresLogement || []).filter(Boolean);       // juste après le type
     var agence = d.agence || {};
     var nomAgence = agence.nom || '[AGENCE]';
 
-    if (d.fonction === 'demandeur') return genererDirect(d, p, D, nature, typo, lieu, crit, agence, nomAgence, acc);
-
-    var souhait = 'le souhait d\'obtenir un logement de type ' + typo +
-      (lieu ? ' ' + (/^[\u0001]?(à|a|sur|dans|en|au|aux)\s/i.test(lieu) ? lieu : 'à ' + lieu) : '') +
-      (crit.length ? ' ' + joindre(crit) : '') + '.';
+    var souhait = formuleSouhait(typo, critLog, lieu, crit);
+    if (d.fonction === 'demandeur') return genererDirect(d, D, nature, souhait, agence, nomAgence, acc);
 
     var lignes = [];
     lignes.push((d.ville || 'Lille') + ', le ' + (d.date || dateLongue(new Date())));
@@ -366,12 +373,13 @@
 
   // Réponse adressée directement au demandeur (vouvoiement)
   var APPEL_DIRECT = { M: 'Monsieur', F: 'Madame', MF: 'Madame, Monsieur', MM: 'Messieurs', FF: 'Mesdames' };
-  function formuleSouhait(typo, lieu, crit) {
+  function formuleSouhait(typo, critLog, lieu, crit) {
     return 'le souhait d\'obtenir un logement de type ' + typo +
+      (critLog.length ? ' ' + joindreLogement(critLog) : '') +
       (lieu ? ' ' + (/^[\u0001]?(à|a|sur|dans|en|au|aux)\s/i.test(lieu) ? lieu : 'à ' + lieu) : '') +
       (crit.length ? ' ' + joindre(crit) : '') + '.';
   }
-  function genererDirect(d, p, D, nature, typo, lieu, crit, agence, nomAgence, acc) {
+  function genererDirect(d, D, nature, souhait, agence, nomAgence, acc) {
     var appel = APPEL_DIRECT[d.profil] || APPEL_DIRECT.MF;
     var lignes = [];
     lignes.push((d.ville || 'Lille') + ', le ' + (d.date || dateLongue(new Date())));
@@ -385,7 +393,7 @@
     lignes.push('');
     lignes.push('J\'ai bien pris connaissance de votre courrier relatif à votre demande de ' + nature + '.');
     lignes.push('');
-    lignes.push('Après examen de votre requête, je vous confirme que vous avez exprimé ' + formuleSouhait(typo, lieu, crit));
+    lignes.push('Après examen de votre requête, je vous confirme que vous avez exprimé ' + souhait);
     lignes.push('');
     lignes.push('Conformément aux procédures en vigueur, votre dossier sera présenté à la Commission d\'Attribution des Logements et d\'Examen de l\'Occupation des Logements ( CALEOL ) de l\'agence de ' + nomAgence +
       ' dès qu\'un logement correspondant à vos critères de recherche sera disponible.');

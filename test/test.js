@@ -171,4 +171,38 @@ Il a déposé un dossier, enregistré sous le numéro départemental unique 0590
 de type 2 à Lille ou ses environs, et dans un immeuble pourvu d'un ascenseur s'il est situé à l'étage. Monsieur Boutarit aspire à stabiliser sa situation.`);
 assert.equal(x.designation, 'Monsieur Hamid Boutarit'); assert.equal(x.typologie, '2');
 assert.equal(x.lieu, 'Lille ou ses environs'); assert.deepEqual(x.criteres, ['asc']);
+// Réponse type fournie par le service pour ce courrier (critère du logement placé avant la commune)
+assert.ok(L.generer({ ...x, reference: '12192', date: '25 Septembre 2026', suiviPar: "Romy DOISNE - Commerciale d'agence",
+  criteresLogement: ['avec ascenseur'], criteresTextes: [],
+  agence: { nom: 'Lille', adresse: '2 bis rue Georges Courteline à Lille', horaires: 'du lundi au vendredi de 9h00 à 12h30 et de 13h30 à 17h00' } }) ===
+`Lille, le 25 Septembre 2026
+
+
+Nos réf. : 12192
+Affaire suivie par : Romy DOISNE - Commerciale d'agence
+
+Objet : Demande de logement pour Monsieur Hamid Boutarit - 0590823827278GDPUB
+
+
+Monsieur le Maire,
+
+J'ai bien pris connaissance de votre courrier par lequel vous avez appelé mon attention sur la situation de Monsieur Hamid Boutarit dans le cadre de sa demande de logement.
+
+Après examen de sa requête, je vous confirme que Monsieur Hamid Boutarit a exprimé le souhait d'obtenir un logement de type 2 avec ascenseur à Lille ou ses environs.
+
+Conformément aux procédures en vigueur, son dossier sera présenté à la Commission d'Attribution des Logements et d'Examen de l'Occupation des Logements ( CALEOL ) de l'agence de Lille dès qu'un logement correspondant à ses critères de recherche sera disponible.
+
+Le cas échéant, Monsieur Hamid Boutarit sera directement contacté par l'un de nos conseillers commerciaux afin de convenir d'un rendez-vous.
+
+Monsieur Hamid Boutarit a également la possibilité de se rapprocher de l'accueil de l'agence de Lille, situé au 2 bis rue Georges Courteline à Lille, ouverte du lundi au vendredi de 9h00 à 12h30 et de 13h30 à 17h00, pour tout renseignement relatif au suivi de sa demande.
+
+Je vous prie d'agréer, Monsieur le Maire, l'expression de ma considération distinguée.
+
+
+Eric COJON
+Directeur Général
+#signature#`);
+const sh = (log) => L.generer({ typologie: '3', lieu: 'Lille', criteresLogement: log, agence: {} }).split('\n').find(l => /souhait/.test(l));
+assert.ok(sh(['en maison individuelle', 'avec un extérieur']).includes('type 3 en maison individuelle avec un extérieur à Lille.'));
+assert.ok(sh(['en rez-de-chaussée', 'avec ascenseur']).includes('type 3 en rez-de-chaussée avec ascenseur à Lille.'));
 console.log('OK');
