@@ -3,7 +3,8 @@
 Outil web pour rédiger en quelques secondes la réponse à un courrier d'élu
 (maire, député…) concernant une demande de logement.
 
-1. Glisser le courrier (PDF scanné, PDF texte ou photo) dans la page.
+1. Glisser un ou plusieurs courriers (PDF scanné, PDF texte ou photo) dans la page :
+   chacun apparaît dans une liste, garde ses propres champs et est marqué « ✓ copié » une fois la réponse copiée.
 2. Le texte est lu (OCR en français) et l'outil repère automatiquement :
    demandeur(s) et civilité, numéro unique, typologie, commune souhaitée,
    critères (métro, rez-de-chaussée…), fonction de l'auteur du courrier.
@@ -29,7 +30,7 @@ interdit au navigateur toute connexion vers un autre site.
 1. Dans le dépôt GitHub : *Settings → Pages → Build and deployment → Source* : choisir **GitHub Actions**.
 2. Fusionner les modifications dans la branche `main` : le workflow
    `.github/workflows/static.yml` lance les tests puis publie le site
-   (uniquement `index.html`, `app.js`, `lettre.js`, `favicon.svg` et `vendor/`).
+   (uniquement `index.html`, `app.js`, `lettre.js`, `favicon.svg`, `logo.svg` et `vendor/`).
 3. L'adresse du site s'affiche dans l'onglet *Actions* (étape « Déployer ») et dans *Settings → Pages*.
 
 La page est marquée `noindex` : elle n'apparaît pas dans les moteurs de recherche.
