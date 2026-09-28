@@ -1,4 +1,12 @@
-# Réponses aux demandes de logement
+# Réponses aux demandes de logement et pouvoirs de conciliation
+
+Deux onglets :
+
+- **Demandes de logement** : réponse aux courriers d'élus ou de demandeurs (ci-dessous).
+- **Conciliations (pouvoir)** : déposer la convocation du conciliateur de justice ;
+  l'outil repère le demandeur, la date, l'heure et le lieu de la réunion, et produit
+  le pouvoir au format Word (logo Partenord Habitat, « #signature# » à la place de la
+  signature). Le mandataire (Hicham KHALFI ou Cathy CLAIRON) se choisit dans la liste.
 
 Outil web pour rédiger en quelques secondes la réponse à un courrier d'élu
 (maire, député…) concernant une demande de logement.
@@ -30,7 +38,7 @@ interdit au navigateur toute connexion vers un autre site.
 1. Dans le dépôt GitHub : *Settings → Pages → Build and deployment → Source* : choisir **GitHub Actions**.
 2. Fusionner les modifications dans la branche `main` : le workflow
    `.github/workflows/static.yml` lance les tests puis publie le site
-   (uniquement `index.html`, `app.js`, `lettre.js`, `favicon.svg`, `logo.svg` et `vendor/`).
+   (uniquement les fichiers du site : `index.html`, les scripts, les logos, `modeles/` et `vendor/`).
 3. L'adresse du site s'affiche dans l'onglet *Actions* (étape « Déployer ») et dans *Settings → Pages*.
 
 La page est marquée `noindex` : elle n'apparaît pas dans les moteurs de recherche.
@@ -40,4 +48,7 @@ La page est marquée `noindex` : elle n'apparaît pas dans les moteurs de recher
 - `index.html` / `app.js` : l'interface.
 - `lettre.js` : extraction des informations et modèle de réponse (c'est ici qu'on modifie le texte type).
 - `vendor/` : pdf.js 3.11.174, Tesseract.js 5.1.1 et données françaises (licence Apache 2.0).
-- `test/test.js` : tests (`node test/test.js`).
+- `conciliation.js` / `conciliation-app.js` : onglet Conciliations (extraction, texte du pouvoir, fichier Word).
+- `modeles/logo-partenord-habitat.png` : logo placé en haut du pouvoir.
+- `test/test.js`, `test/test-conciliation.js` : tests (`node test/test.js && node test/test-conciliation.js`).
+  Les exemples tirés de courriers réels y sont **anonymisés** : ne jamais y mettre de vrais noms ou numéros.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Réponses logement</title>
+<title>Courriers Partenord</title>
 <meta name="robots" content="noindex">
 <!-- Aucune connexion vers un autre site n'est autorisée : le courrier ne peut pas quitter le poste -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' blob: data:; img-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'none'">
@@ -22,6 +22,7 @@
       --warn-soft: #3a3120; --ok: #6fd1ac; --warn: #e3b25a; --focus: #8f91e8; }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--ink);
     font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   header { padding: 23px 24px 18px; border-bottom: 1px solid var(--line);
@@ -36,6 +37,23 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
   .card + .card { margin-top: 16px; }
   h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--marine); margin: 0 0 12px; }
+  .onglets { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  .onglets button { border: 0; background: none; padding: 6px 12px; font-weight: 600; color: var(--muted); }
+  .onglets button[aria-pressed=true] { background: var(--card); color: var(--marine); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .depot { border: 2px dashed var(--line); border-radius: 10px; padding: 26px 16px; text-align: center; cursor: pointer; transition: .15s; }
+  .depot.over, .depot:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .depot strong { display: block; font-size: 16px; }
+  .depot span { color: var(--muted); font-size: 13px; }
+  .etat { margin-top: 10px; font-size: 13px; color: var(--muted); min-height: 20px; }
+  .feuille { font: 14px/1.55 Calibri, Carlito, Arial, sans-serif; background: #fff; color: #111; border: 1px solid var(--line); border-radius: 6px; padding: 32px 48px; min-height: 600px; }
+  .feuille .logo-doc { display: block; margin: 0 auto 18px; width: 120px; }
+  .feuille .entete { font-size: 12px; white-space: pre-line; margin: 0 0 20px; }
+  .feuille .entete::first-line { font-weight: 700; }
+  .feuille h3 { text-align: center; font-size: 20px; margin: 24px 0; }
+  .feuille p { text-align: justify; margin: 0 0 14px; }
+  .feuille .signature { margin: 28px 0 0 55%; text-align: left; white-space: pre-line; }
+  .feuille .var { background: #dff2ea; border-radius: 3px; }
+  .feuille .trou { background: #ffd6d6; color: #8a1111; border-radius: 3px; }
   #drop { border: 2px dashed var(--line); border-radius: 10px; padding: 26px 16px; text-align: center;
     cursor: pointer; transition: .15s; }
   #drop.over, #drop:hover { border-color: var(--accent); background: var(--accent-soft); }
@@ -106,14 +124,18 @@
 <header>
   <img src="logo.svg" alt="" width="30" height="46" class="logo">
   <div>
-    <h1>Réponses aux demandes de logement</h1>
-    <p>Déposez un ou plusieurs courriers reçus : le texte de réponse est prêt à copier dans le PGI. Tout reste sur votre poste, rien n'est envoyé sur internet.</p>
+    <h1>Courriers : demandes de logement et conciliations</h1>
+    <p>Déposez les courriers reçus : la réponse ou le pouvoir est prêt en quelques secondes. Tout reste sur votre poste, rien n'est envoyé sur internet.</p>
   </div>
+  <nav class="onglets" aria-label="Type de courrier">
+    <button type="button" data-vue="logement" aria-pressed="true">Demandes de logement</button>
+    <button type="button" data-vue="conciliation" aria-pressed="false">Conciliations (pouvoir)</button>
+  </nav>
   <div class="spacer"></div>
   <button type="button" id="btn-reglages">Réglages (signataire, agences…)</button>
 </header>
 
-<main>
+<main id="vue-logement">
   <section>
     <div class="card">
       <h2>1. Courrier reçu</h2>
@@ -145,7 +167,7 @@
       <input type="text" id="designation" placeholder="Monsieur et Madame Dupont">
 
       <label for="numero">Numéro unique</label>
-      <input type="text" id="numero" placeholder="0590423808575GDPUB" autocomplete="off">
+      <input type="text" id="numero" placeholder="0590000000015GDPUB" autocomplete="off">
 
       <div class="row">
         <div>
@@ -213,6 +235,66 @@
   </section>
 </main>
 
+<main id="vue-conciliation" hidden>
+  <section>
+    <div class="card">
+      <h2>1. Convocation du conciliateur</h2>
+      <div id="c-drop" class="depot" tabindex="0" role="button" aria-label="Déposer une convocation PDF ou une image">
+        <strong>Glissez la convocation ici</strong>
+        <span>ou cliquez pour la choisir (PDF scanné, PDF texte, JPG, PNG)</span>
+      </div>
+      <input type="file" id="c-fichier" accept=".pdf,image/*" hidden>
+      <div id="c-etat" class="etat"></div>
+      <details>
+        <summary>Texte lu dans la convocation (ou collez un texte ici)</summary>
+        <textarea id="c-texte" placeholder="Vous pouvez aussi coller ici le texte de la convocation, puis cliquer sur Analyser."></textarea>
+        <button type="button" id="c-analyser" style="margin-top:6px">Analyser ce texte</button>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>2. Vérifier les informations</h2>
+      <label for="c-demandeur">Demandeur <small>(civilité, prénom et nom)</small></label>
+      <input type="text" id="c-demandeur" placeholder="Madame Marie DUPONT">
+      <div class="row" style="grid-template-columns: 2fr 1fr">
+        <div>
+          <label for="c-jour">Date de la réunion</label>
+          <input type="text" id="c-jour" placeholder="mercredi 4 novembre 2026">
+        </div>
+        <div>
+          <label for="c-heure">Heure</label>
+          <input type="text" id="c-heure" placeholder="11h00">
+        </div>
+      </div>
+      <label for="c-lieu">Lieu de la réunion <small>(tel qu'il apparaîtra après « – »)</small></label>
+      <textarea id="c-lieu" rows="2" placeholder="à la mairie de La Madeleine"></textarea>
+      <div class="row" style="grid-template-columns: 3fr 2fr">
+        <div>
+          <label for="c-mandataire">Mandataire</label>
+          <select id="c-mandataire"></select>
+        </div>
+        <div>
+          <label for="c-date">Date du pouvoir</label>
+          <input type="text" id="c-date">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2>3. Pouvoir</h2>
+      <div class="actions">
+        <button type="button" class="primary" id="c-word">Télécharger le pouvoir (Word)</button>
+        <button type="button" id="c-copier">Copier le texte</button>
+        <span class="ok" id="c-ok" aria-live="polite"></span>
+      </div>
+      <div id="c-apercu" class="feuille"></div>
+      <p class="aide">Le fichier Word reprend le logo Partenord Habitat, ce texte et « #signature# » à la place de la signature.</p>
+    </div>
+  </section>
+</main>
+
 <dialog id="reglages">
   <h2>Réglages</h2>
   <p class="aide">Enregistrés sur ce navigateur uniquement.</p>
@@ -251,5 +333,7 @@
 <script src="vendor/tesseract/tesseract.min.js"></script>
 <script src="lettre.js"></script>
 <script src="app.js"></script>
+<script src="conciliation.js"></script>
+<script src="conciliation-app.js"></script>
 </body>
 </html>
