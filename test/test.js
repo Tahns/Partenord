@@ -79,4 +79,30 @@ assert.equal(e2.fonction, 'depute');
 const e3 = L.extraire("Madame Fatima BENALI, domiciliée 3 rue X à Tourcoing, sollicite une mutation vers un F2 à Tourcoing. N° 059 1122 33 44556 ABCDE");
 console.log(e3.designation, e3.profil, e3.typologie, e3.lieu, e3.mutation, e3.numero);
 assert.equal(e3.profil, 'F'); assert.equal(e3.typologie, '2'); assert.equal(e3.lieu, 'Tourcoing'); assert.ok(e3.mutation);
+
+// L'élu, le destinataire et le signataire ne sont pas pris pour le demandeur
+const e4 = L.extraire(`ASSEMBLÉE NATIONALE
+Madame Sophie DURAND Députée du Nord
+Monsieur Eric COJON
+Directeur Général Partenord Habitat
+Monsieur le Directeur Général,
+Je me permets d'appeler votre attention sur la situation de Madame Fatima BENALI, domiciliée 3 rue des Lilas à Roubaix.
+Madame BENALI a déposé une demande (numéro unique 059 12 23 34 45 56 ABCDE) pour un T3 à Roubaix, en rez-de-chaussée.`,
+  { exclus: ['Eric COJON'] });
+assert.equal(e4.designation, 'Madame Fatima BENALI');
+assert.equal(e4.profil, 'F');
+assert.equal(e4.fonction, 'depute');
+assert.ok(e4.elueFem);
+const e5 = L.extraire(`Objet : demande de logement de M. Karim AZZOUZ
+Monsieur le Directeur,
+J'attire votre attention sur la demande de M. AZZOUZ qui recherche un appartement de type III sur Tourcoing à proximité des écoles.`);
+assert.equal(e5.designation, 'Monsieur Karim AZZOUZ');
+assert.equal(e5.typologie, '3');
+assert.equal(e5.lieu, 'Tourcoing');
+assert.ok(e5.criteres.includes('ecole'));
+const e6 = L.extraire("Madame Christine MARTIN, Adjointe au Maire de Lille, à Monsieur Eric COJON. Je vous signale la situation de Monsieur et Madame Nguyen qui souhaitent un logement de type 2 ou 3 à Lomme.");
+assert.equal(e6.designation, 'Monsieur et Madame Nguyen');
+assert.equal(e6.fonction, 'adjoint');
+const e7 = L.extraire("Monsieur Eric COJON, je vous transmets la demande de Monsieur Paul LEFEBVRE pour un T2 à Lille.", { exclus: ['Eric COJON'] });
+assert.equal(e7.designation, 'Monsieur Paul LEFEBVRE');
 console.log('OK');
