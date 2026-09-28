@@ -42,7 +42,7 @@
               'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
   function dateLongue(d) {
-    return d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear();
+    return (d.getDate() === 1 ? '1er' : d.getDate()) + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear();
   }
 
   // ---------- Nettoyage du texte OCR ----------
@@ -59,16 +59,19 @@
 
   var MAJ = 'A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸ';
   var LET = "A-Za-zÀ-ÖØ-öø-ÿ'";
-  var CIV = '(Monsieur|Madame|Mademoiselle|Messieurs|Mesdames|MM\\.?|Mmes\\.?|Mme\\.?|Mlle\\.?|M\\.)';
+  var CIV = '(Monsieur|Madame|Mademoiselle|Messieurs|Mesdames|MONSIEUR|MADAME|MADEMOISELLE|MESSIEURS|MESDAMES|MM\\.?|Mmes\\.?|Mme\\.?|Mlle\\.?|Mr\\.?|M\\.)';
+  var ET = '\\s(?:et|ET)\\s';
   // Nom : 1 à 3 mots commençant par une majuscule (particules autorisées)
   var NOM = "((?:(?:de|du|des|van|von|le|la|el|ben|d')\\s?)?[" + MAJ + "][" + LET + "-]+(?:\\s(?:(?:de|du|des|van|von|el|ben|d')\\s?)?[" + MAJ + "][" + LET + "-]+){0,2})";
-  var MOTS_EXCLUS = /^(?:(?:le|la|les|l'|Le|La|Les|Je|Nous|Vous|Il|Elle|Ils|Elles|En|Par|Pour|Mon|Ma|Mes|Ce|Cette|Au|Aux|Et|Monsieur|Madame|Mademoiselle|Messieurs|Mesdames|Objet|Habitat)$|(?:Directeur|Directrice|Maire|Mairie|Pr[ée]sident|Pr[ée]f[eè]t|D[ée]put[ée]|S[ée]nat|Conseill|Adjoint|Ministre|D[ée]l[ée]gu[ée]|Partenord))/;
+  // Mots qui ne peuvent pas faire partie d'un nom de demandeur ni d'une commune (majuscules ou non)
+  var MOTS_EXCLUS = /^(?:le|la|les|l'|je|nous|vous|il|elle|ils|elles|en|par|pour|mon|ma|mes|ce|cette|au|aux|et|de|du|des|objet|habitat|monsieur|madame|mademoiselle|messieurs|mesdames|directeur|directrice|g[ée]n[ée]rale?|maire|mairie|pr[ée]sidente?|pr[ée]f[eè]te?|pr[ée]fecture|d[ée]put[ée]e?|s[ée]nat(?:eur|rice)?|conseill[eè]re?|adjointe?|ministre|d[ée]l[ée]gu[ée]e?|partenord)$/i;
   // Titre qui suit le nom d'un élu ou d'un destinataire : ce n'est pas le demandeur
   var FONCTION_APRES = /^,?\s(?:(?:le|la|l')\s?)?(?:Directeur|Directrice|Maire|Pr[ée]sident|Pr[ée]f[eè]t|D[ée]put[ée]|S[ée]nat|Conseill|Adjoint|Ministre|D[ée]l[ée]gu[ée])/i;
 
   function civNorm(c) {
     c = c.replace(/\.$/, '');
-    if (/^(M|Monsieur)$/.test(c)) return 'Monsieur';
+    if (/^[A-Z]{4,}$/.test(c)) c = c.charAt(0) + c.slice(1).toLowerCase();
+    if (/^(M|Mr|Monsieur)$/.test(c)) return 'Monsieur';
     if (/^(Mme|Madame|Mlle|Mademoiselle)$/.test(c)) return 'Madame';
     if (/^(MM|Messieurs)$/.test(c)) return 'Messieurs';
     if (/^(Mmes|Mesdames)$/.test(c)) return 'Mesdames';
@@ -119,7 +122,7 @@
     }
 
     // "Monsieur Jean DUPONT et Madame Marie MARTIN" (noms différents)
-    re = new RegExp(CIV + '\\s' + NOM + '\\set\\s' + CIV + '\\s' + NOM, 'g');
+    re = new RegExp(CIV + '\\s' + NOM + ET + CIV + '\\s' + NOM, 'g');
     while ((m = re.exec(t))) {
       var n1 = nettoyerNom(m[2]), n2 = nettoyerNom(m[4]);
       if (!nomValide(n1) || !nomValide(n2) || horsSujet(m.index, m.index + m[0].length, [n1, n2])) continue;
@@ -129,7 +132,7 @@
     }
 
     // "Monsieur et Madame DUPONT"
-    re = new RegExp(CIV + '\\set\\s' + CIV + '\\s' + NOM, 'g');
+    re = new RegExp(CIV + ET + CIV + '\\s' + NOM, 'g');
     while ((m = re.exec(t))) {
       var nom = nettoyerNom(m[3]);
       if (!nomValide(nom) || horsSujet(m.index, m.index + m[0].length, [nom])) continue;
@@ -178,7 +181,7 @@
   function chiffreType(x) { return ROMAINS[x] || x; }
 
   function extraireTypologie(t) {
-    var re = /\b(?:de\s)?(?:type|typologie|T|F)\s?(\d|I{1,3}|IV|VI{0,2}|V)\b(?:\s?(?:ou|\/|à|-|et)\s?(?:(?:de\s)?(?:type|T|F)\s?)?(\d)\b)?/g;
+    var re = /\b(?:de\s)?(?:[Tt]ype|TYPE|[Tt]ypologie|TYPOLOGIE|T|F)\s?(\d|I{1,3}|IV|VI{0,2}|V)\b(?:\s?(?:ou|OU|\/|à|-|et)\s?(?:(?:de\s)?(?:[Tt]ype|TYPE|T|F)\s?)?(\d)\b)?/g;
     var m;
     while ((m = re.exec(t))) {
       // ignore "T 03 20 ..." (téléphone) et références type "F2023"
@@ -192,9 +195,21 @@
   }
 
   // ---------- Lieu souhaité ----------
-  var VILLE = "([" + MAJ + "][" + LET + "]*(?:-[" + LET + "]+)*(?:\\s(?:d'|de\\s|du\\s|en\\s|sur\\s|lez\\s|lès\\s)[" + MAJ + "][" + LET + "]*(?:-[" + LET + "]+)*)?)";
+  var VILLE = "([" + MAJ + "][" + LET + "]*(?:-[" + LET + "]+)*(?:\\s(?:d'|D'|de\\s|DE\\s|du\\s|DU\\s|en\\s|EN\\s|sur\\s|SUR\\s|lez\\s|LEZ\\s|lès\\s|LÈS\\s)[" + MAJ + "][" + LET + "]*(?:-[" + LET + "]+)*)?)";
+
+  // « VILLENEUVE D'ASCQ » -> « Villeneuve d'Ascq »
+  function casseVille(v) {
+    if (v !== v.toUpperCase()) return v;
+    return v.toLowerCase().replace(/(^|[\s-])([a-zà-ÿ])/g, function (x, a, b) { return a + b.toUpperCase(); })
+      .replace(/\b(D'|De |Du |En |Sur |Lez |Lès )/g, function (x) { return x.toLowerCase(); })
+      .replace(/(d')([a-zà-ÿ])/g, function (x, a, b) { return a + b.toUpperCase(); });
+  }
 
   function extraireLieu(t, apres) {
+    return casseVille(lieuBrut(t, apres));
+  }
+
+  function lieuBrut(t, apres) {
     if (apres != null) {
       var zone = t.slice(apres, apres + 90);
       var m = new RegExp("(?:^|\\s)(?:sur la commune de|dans le secteur de|secteur de|sur|à)\\s" + VILLE).exec(zone);
@@ -209,23 +224,26 @@
 
   // ---------- Correspondant (élu) ----------
   function extraireFonction(t) {
+    // [fonction, détection, forme féminine]
     var tests = [
-      ['depute',     /d[ée]put[ée]|assembl[ée]e nationale/i],
-      ['senateur',   /s[ée]nat(eur|rice)?\b/i],
-      ['prefet',     /pr[ée]f[èe]t|pr[ée]fecture/i],
-      ['ministre',   /\bministre\b/i],
-      ['adjoint',    /adjointe? au maire/i],
-      ['conseiller', /conseill[eè]re? d[ée]partementa/i],
-      ['president',  /\bpr[ée]sidente?\b/i],
-      ['maire',      /\bmaire\b|h[ôo]tel de ville|mairie/i]
+      ['depute',     /d[ée]put[ée]|assembl[ée]e nationale/i, /d[ée]put[ée]e\b/i],
+      ['senateur',   /s[ée]nat(eur|rice)?\b/i,              /s[ée]natrice/i],
+      ['prefet',     /pr[ée]f[èe]t|pr[ée]fecture/i,          /pr[ée]f[èe]te\b/i],
+      ['ministre',   /\bministre\b/i,                       /\b(?:madame )?la ministre\b/i],
+      ['adjoint',    /adjointe? au maire/i,                  /adjointe au maire/i],
+      ['conseiller', /conseill[eè]re? d[ée]partementa/i,     /conseill[èe]re d[ée]partementale/i],
+      ['president',  /\bpr[ée]sidente?\b/i,                  /\bpr[ée]sidente\b/i],
+      ['maire',      /\bmaire\b|h[ôo]tel de ville|mairie/i, /\b(?:madame )?la maire\b/i]
     ];
-    for (var i = 0; i < tests.length; i++) {
-      if (tests[i][1].test(t)) {
-        var fem = /\b(la maire|madame la|d[ée]put[ée]e|s[ée]natrice|pr[ée]f[èe]te|pr[ée]sidente|adjointe|conseill[èe]re)\b/i.test(t);
-        return { fonction: tests[i][0], fem: fem };
-      }
-    }
-    return { fonction: 'autre', fem: false };
+    // La fonction citée en premier (en-tête du courrier) l'emporte
+    var best = null;
+    tests.forEach(function (x) {
+      var m = x[1].exec(t);
+      if (m && (!best || m.index < best.index)) best = { fonction: x[0], index: m.index, fem: x[2] };
+    });
+    if (!best) return { fonction: 'autre', fem: false };
+    var fem = best.fem.test(t);
+    return { fonction: best.fonction, fem: fem };
   }
 
   // options.exclus : noms à ne jamais retenir comme demandeur (ex. signataire de la réponse)

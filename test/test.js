@@ -105,4 +105,20 @@ assert.equal(e6.designation, 'Monsieur et Madame Nguyen');
 assert.equal(e6.fonction, 'adjoint');
 const e7 = L.extraire("Monsieur Eric COJON, je vous transmets la demande de Monsieur Paul LEFEBVRE pour un T2 à Lille.", { exclus: ['Eric COJON'] });
 assert.equal(e7.designation, 'Monsieur Paul LEFEBVRE');
+
+// Courriers en majuscules, abréviations, casse des communes
+const cas = (t, o) => L.extraire(t, o);
+let x = cas("MONSIEUR ET MADAME DUPONT sollicitent un logement de Type 4 à LILLE.");
+assert.equal(x.designation, 'Monsieur et Madame DUPONT'); assert.equal(x.profil, 'MF');
+assert.equal(x.typologie, '4'); assert.equal(x.lieu, 'Lille');
+x = cas("Mr Paul MARTIN souhaite un appartement TYPE 2 sur VILLENEUVE D'ASCQ. Le Maire. Copie : Madame la Présidente du Département");
+assert.equal(x.designation, 'Monsieur Paul MARTIN'); assert.equal(x.typologie, '2');
+assert.equal(x.lieu, "Villeneuve d'Ascq"); assert.equal(x.fonction, 'maire'); assert.ok(!x.elueFem);
+x = cas("MONSIEUR LE DIRECTEUR GÉNÉRAL. Je vous signale Madame Sarah COHEN qui souhaite un T2 à Lille.");
+assert.equal(x.designation, 'Madame Sarah COHEN');
+x = cas("MADAME LA MAIRE DE LOOS. Monsieur Jean VIDAL, T3 à Loos");
+assert.equal(x.designation, 'Monsieur Jean VIDAL'); assert.equal(x.fonction, 'maire'); assert.ok(x.elueFem);
+x = cas("Le Maire de Lille. la situation de Madame Julie MAIRESSE qui souhaite un F3 à Lomme, conseillère en insertion.");
+assert.equal(x.designation, 'Madame Julie MAIRESSE'); assert.ok(!x.elueFem);
+assert.equal(L.dateLongue(new Date(2026, 9, 1)), '1er Octobre 2026');
 console.log('OK');

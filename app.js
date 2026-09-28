@@ -18,6 +18,7 @@
   var reglages;
   try { reglages = Object.assign({}, DEFAUT, JSON.parse(localStorage.getItem('reponses-logement') || '{}')); }
   catch (e) { reglages = Object.assign({}, DEFAUT); }
+  if (!Array.isArray(reglages.agences) || !reglages.agences.length) reglages.agences = DEFAUT.agences;
   function sauver() {
     try { localStorage.setItem('reponses-logement', JSON.stringify(reglages)); } catch (e) { /* stockage indisponible */ }
   }
@@ -70,8 +71,12 @@
   async function ocr(images) {
     if (!worker) {
       etat('Chargement de la reconnaissance de texte (première fois : quelques secondes)… <progress></progress>');
+      // Tout est servi par le site lui-même (dossier vendor/) : aucun appel à un service externe
+      var base = new URL('vendor/tesseract/', document.baseURI).href;
       worker = await Tesseract.createWorker('fra', 1, {
-        langPath: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/fra/4.0.0_best_int',
+        workerPath: base + 'worker.min.js',
+        corePath: base + 'core/',
+        langPath: base + 'lang',
         logger: function (m) {
           if (m.status === 'recognizing text') etat('Lecture du courrier… <progress value="' + m.progress + '"></progress>');
         }
@@ -87,7 +92,7 @@
   }
 
   async function lirePdf(buffer) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
     var pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
     var nb = Math.min(pdf.numPages, 5);
     var texte = '', pages = [];
@@ -241,13 +246,42 @@
     $('r-suivi').value = reglages.suiviPar;
     $('r-ville').value = reglages.ville;
     $('r-signature').value = reglages.signature;
+    $('r-message').textContent = '';
     dlg.showModal();
   });
-  $('r-fermer').addEventListener('click', function () {
+  // Enregistré à chaque fermeture, y compris avec la touche Échap
+  $('r-fermer').addEventListener('click', function () { dlg.close(); });
+  dlg.addEventListener('close', function () {
     reglages.suiviPar = $('r-suivi').value;
     reglages.ville = $('r-ville').value.trim() || 'Lille';
     reglages.signature = $('r-signature').value.replace(/\s+$/, '') || DEFAUT.signature;
-    sauver(); dlg.close(); maj();
+    sauver(); maj();
+  });
+
+  // Partage des réglages entre collègues (fichier JSON)
+  $('r-exporter').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(reglages, null, 2)], { type: 'application/json' }));
+    a.download = 'reglages-reponses-logement.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+  $('r-importer').addEventListener('click', function () { $('r-fichier').click(); });
+  $('r-fichier').addEventListener('change', async function () {
+    var f = this.files[0]; this.value = '';
+    if (!f) return;
+    try {
+      var r = JSON.parse(await f.text());
+      if (!r || !Array.isArray(r.agences) || !r.agences.length || !r.agences.every(function (a) { return a && typeof a.nom === 'string'; })) throw new Error('format');
+      reglages = Object.assign({}, DEFAUT, r);
+      $('r-suivi').value = reglages.suiviPar;
+      $('r-ville').value = reglages.ville;
+      $('r-signature').value = reglages.signature;
+      sauver(); remplirAgences(); maj();
+      $('r-message').textContent = '✓ Réglages importés (' + reglages.agences.length + ' agence' + (reglages.agences.length > 1 ? 's' : '') + ').';
+    } catch (e) {
+      $('r-message').textContent = 'Ce fichier n\'est pas un fichier de réglages valide.';
+    }
   });
   $('a-enregistrer').addEventListener('click', function () {
     var a = {
