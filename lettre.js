@@ -321,7 +321,7 @@
     lignes.push('');
     lignes.push('Je vous prie d\'agréer, ' + titre + ', l\'expression de ma considération distinguée.');
     lignes.push('', '');
-    (d.signature || 'Eric COJON\nDirecteur Général\n#signature#').split('\n').forEach(function (l) { lignes.push(l); });
+    (d.signature || 'Eric COJON\n#signature#').split('\n').forEach(function (l) { lignes.push(l); });
 
     return lignes.join('\n');
   }
