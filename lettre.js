@@ -30,7 +30,7 @@
 
   // ---------- Critères de recherche fréquents ----------
   var CRITERES = [
-    { id: 'metro',   texte: "près d'une station de métro",            re: /m[ée]tro/i },
+    { id: 'metro',   texte: "près d'une station de métro",            re: /\bm[ée]tro\b/i },
     { id: 'tram',    texte: "près d'une station de tramway",          re: /tram/i },
     { id: 'bus',     texte: 'bien desservi par les transports en commun', re: /\bbus\b|transports? en commun/i },
     { id: 'rdc',     texte: 'en rez-de-chaussée',                     re: /rez[\s-]de[\s-]chauss/i },
@@ -210,19 +210,25 @@
   }
 
   function extraireLieu(t, apres) {
-    return casseVille(lieuBrut(t, apres));
+    return lieuBrut(t, apres);
   }
+
+  // « au sein de la métropole lilloise », « dans l'agglomération lensoise »
+  var SECTEUR = /(?:au sein de|dans|sur)\s((?:la|l')\s?(?:m[ée]tropole|agglom[ée]ration|communaut[ée] urbaine)(?:\s(?:lilloise|de Lille|[a-zà-ÿ]+oise|du [A-ZÀ-Ÿ][\wÀ-ÿ'-]+|de [A-ZÀ-Ÿ][\wÀ-ÿ'-]+))?)/i;
+  // « à Lille ou ses environs » est repris tel quel
+  var ENVIRONS = "((?:\\s(?:ou|et)\\s(?:dans\\s)?(?:ses|leurs)\\s(?:environs|alentours))?)";
 
   function lieuBrut(t, apres) {
     if (apres != null) {
-      var zone = t.slice(apres, apres + 90);
-      var m = new RegExp("(?:^|\\s)(?:sur la commune de|dans le secteur de|secteur de|sur|à)\\s" + VILLE).exec(zone);
-      if (m && !MOTS_EXCLUS.test(m[1])) return m[1];
+      var zone = t.slice(apres, apres + 110);
+      var m = new RegExp("(?:^|\\s)(?:sur la commune de|dans le secteur de|secteur de|sur|à)\\s" + VILLE + ENVIRONS).exec(zone);
+      if (m && !MOTS_EXCLUS.test(m[1])) return casseVille(m[1]) + m[2];
+      var sec = SECTEUR.exec(zone);
+      if (sec) return 'dans ' + sec[1];
     }
-    var m2 = new RegExp("(?:logement|appartement|maison)[^.]{0,60}?\\s(?:sur la commune de|secteur de|à)\\s" + VILLE).exec(t);
-    if (m2 && !MOTS_EXCLUS.test(m2[1])) return m2[1];
-    var m3 = new RegExp('domicili[ée]{1,2}s?\\s[^.]{0,80}?\\sà\\s' + VILLE).exec(t);
-    if (m3) return m3[1];
+    var m2 = new RegExp("(?:logement|appartement|maison)[^.]{0,60}?\\s(?:sur la commune de|secteur de|à)\\s" + VILLE + ENVIRONS).exec(t);
+    if (m2 && !MOTS_EXCLUS.test(m2[1])) return casseVille(m2[1]) + m2[2];
+    // L'adresse actuelle du demandeur n'est pas reprise : mieux vaut un champ vide qu'une commune fausse
     return '';
   }
 
