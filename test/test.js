@@ -41,6 +41,7 @@ Monsieur le Maire,
 J'ai bien pris connaissance de votre courrier par lequel vous avez appelé mon attention sur la situation de Monsieur et Madame Moutchou dans le cadre de leur demande de logement.
 
 Après examen de leur requête, je vous confirme que Monsieur et Madame Moutchou ont exprimé le souhait d'obtenir un logement de type 4 à Lille près d'une station de métro.
+
 Conformément aux procédures en vigueur, leur dossier sera présenté à la Commission d'Attribution des Logements et d'Examen de l'Occupation des Logements ( CALEOL ) de l'agence de Lille dès qu'un logement correspondant à leurs critères de recherche sera disponible.
 
 Le cas échéant, Monsieur et Madame Moutchou seront directement contactés par l'un de nos conseillers commerciaux afin de convenir d'un rendez-vous.
@@ -146,9 +147,25 @@ x = cas(`Mon attention a été attirée sur la demande de logement de Madame Eli
 ne disposant pas du permis de conduire, elle privilégie les communes bien desservies par les transports en commun. LE MAIRE`);
 assert.equal(x.designation, 'Madame Elisa Humetz'); assert.equal(x.profil, 'F');
 assert.equal(x.numero, '0590826031788GDPUB'); assert.equal(x.typologie, '3 ou 4');
-assert.equal(x.lieu, 'dans la métropole lilloise'); assert.equal(x.fonction, 'maire');
-assert.deepEqual(x.criteres, ['bus']);
-assert.ok(L.generer({ ...x, criteresTextes: [], agence: {} }).includes('logement de type 3 ou 4 dans la métropole lilloise.'));
+assert.equal(x.lieu, 'au sein de la métropole lilloise'); assert.equal(x.fonction, 'maire');
+// « transports en commun » est dans un autre paragraphe que la demande : non repris (cf. réponse type)
+assert.deepEqual(x.criteres, []);
+// Réponse type fournie par le service pour ce courrier
+assert.ok(L.generer({ ...x, designation: 'Madame Élisa Humetz', criteresTextes: [],
+  agence: { nom: 'Lille', adresse: '2 bis rue Georges Courteline à Lille', horaires: 'du lundi au vendredi de 9h00 à 12h30 et de 13h30 à 17h00' } }).includes(
+`Monsieur le Maire,
+
+J'ai bien pris connaissance de votre courrier par lequel vous avez appelé mon attention sur la situation de Madame Élisa Humetz dans le cadre de sa demande de logement.
+
+Après examen de sa requête, je vous confirme que Madame Élisa Humetz a exprimé le souhait d'obtenir un logement de type 3 ou 4 au sein de la métropole lilloise.
+
+Conformément aux procédures en vigueur, son dossier sera présenté à la Commission d'Attribution des Logements et d'Examen de l'Occupation des Logements ( CALEOL ) de l'agence de Lille dès qu'un logement correspondant à ses critères de recherche sera disponible.
+
+Le cas échéant, Madame Élisa Humetz sera directement contactée par l'un de nos conseillers commerciaux afin de convenir d'un rendez-vous.
+
+Madame Élisa Humetz a également la possibilité de se rapprocher de l'accueil de l'agence de Lille, situé au 2 bis rue Georges Courteline à Lille, ouverte du lundi au vendredi de 9h00 à 12h30 et de 13h30 à 17h00, pour tout renseignement relatif au suivi de sa demande.
+
+Je vous prie d'agréer, Monsieur le Maire, l'expression de ma considération distinguée.`));
 x = cas(`HOTEL DE VILLE. Mon attention a été attirée sur la demande de logement de Monsieur Hamid Boutarit, hébergé depuis plusieurs années.
 Il a déposé un dossier, enregistré sous le numéro départemental unique 0590823827278GDPUB, en vue de l'attribution d'un appartement
 de type 2 à Lille ou ses environs, et dans un immeuble pourvu d'un ascenseur s'il est situé à l'étage. Monsieur Boutarit aspire à stabiliser sa situation.`);

@@ -214,7 +214,7 @@
   }
 
   // « au sein de la métropole lilloise », « dans l'agglomération lensoise »
-  var SECTEUR = /(?:au sein de|dans|sur)\s((?:la|l')\s?(?:m[ée]tropole|agglom[ée]ration|communaut[ée] urbaine)(?:\s(?:lilloise|de Lille|[a-zà-ÿ]+oise|du [A-ZÀ-Ÿ][\wÀ-ÿ'-]+|de [A-ZÀ-Ÿ][\wÀ-ÿ'-]+))?)/i;
+  var SECTEUR = /((?:au sein de|dans|sur)\s(?:la|l')\s?(?:m[ée]tropole|agglom[ée]ration|communaut[ée] urbaine)(?:\s(?:lilloise|de Lille|[a-zà-ÿ]+oise|du [A-ZÀ-Ÿ][\wÀ-ÿ'-]+|de [A-ZÀ-Ÿ][\wÀ-ÿ'-]+))?)/i;
   // « à Lille ou ses environs » est repris tel quel
   var ENVIRONS = "((?:\\s(?:ou|et)\\s(?:dans\\s)?(?:ses|leurs)\\s(?:environs|alentours))?)";
 
@@ -224,7 +224,7 @@
       var m = new RegExp("(?:^|\\s)(?:sur la commune de|dans le secteur de|secteur de|sur|à)\\s" + VILLE + ENVIRONS).exec(zone);
       if (m && !MOTS_EXCLUS.test(m[1])) return casseVille(m[1]) + m[2];
       var sec = SECTEUR.exec(zone);
-      if (sec) return 'dans ' + sec[1];
+      if (sec) return sec[1];
     }
     var m2 = new RegExp("(?:logement|appartement|maison)[^.]{0,60}?\\s(?:sur la commune de|secteur de|à)\\s" + VILLE + ENVIRONS).exec(t);
     if (m2 && !MOTS_EXCLUS.test(m2[1])) return casseVille(m2[1]) + m2[2];
@@ -265,6 +265,15 @@
     return false;
   }
 
+  // Phrase qui formule la demande (celle du type de logement) : seuls ses critères sont repris,
+  // les autres éléments du courrier (situation, préférences secondaires) restent à l'appréciation de l'agent
+  function phraseDemande(t, typo) {
+    if (!typo) return t;
+    var debut = t.lastIndexOf('. ', typo.index) + 1;
+    var fin = t.slice(typo.index).search(/\.(?:\s+[^\d\s]|\s*$)/);
+    return t.slice(debut, fin < 0 ? t.length : typo.index + fin);
+  }
+
   // Courrier écrit par le demandeur (« ma demande », « je réside »…) plutôt que par un élu
   function ecritParDemandeur(t) {
     var signes = t.match(/\b(?:ma demande|mon dossier|ma situation|ma famille|mes enfants|mon logement|je r[ée]side|mon foyer|ma candidature|mon épouse|mon mari|ma conjointe|mon conjoint)\b/gi) || [];
@@ -288,7 +297,7 @@
       fonction: fct.fonction,
       elueFem: fct.fem,
       mutation: /\bmutation\b/i.test(t),
-      criteres: CRITERES.filter(function (c) { return critereDemande(t, c.re); }).map(function (c) { return c.id; }),
+      criteres: CRITERES.filter(function (c) { return critereDemande(phraseDemande(t, typo), c.re); }).map(function (c) { return c.id; }),
       texte: t
     };
   }
@@ -337,6 +346,7 @@
       ' dans le cadre de ' + pos + ' demande de ' + nature + '.');
     lignes.push('');
     lignes.push('Après examen de ' + pos + ' requête, je vous confirme que ' + D + ' ' + avoir + ' exprimé ' + souhait);
+    lignes.push('');
     lignes.push('Conformément aux procédures en vigueur, ' + posM + ' dossier sera présenté à la Commission d\'Attribution des Logements et d\'Examen de l\'Occupation des Logements ( CALEOL ) de l\'agence de ' + nomAgence +
       ' dès qu\'un logement correspondant à ' + posPl + ' critères de recherche sera disponible.');
     lignes.push('');
@@ -376,6 +386,7 @@
     lignes.push('J\'ai bien pris connaissance de votre courrier relatif à votre demande de ' + nature + '.');
     lignes.push('');
     lignes.push('Après examen de votre requête, je vous confirme que vous avez exprimé ' + formuleSouhait(typo, lieu, crit));
+    lignes.push('');
     lignes.push('Conformément aux procédures en vigueur, votre dossier sera présenté à la Commission d\'Attribution des Logements et d\'Examen de l\'Occupation des Logements ( CALEOL ) de l\'agence de ' + nomAgence +
       ' dès qu\'un logement correspondant à vos critères de recherche sera disponible.');
     lignes.push('');
