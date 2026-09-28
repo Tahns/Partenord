@@ -146,7 +146,7 @@
     document.querySelectorAll('#criteres input').forEach(function (cb) { cb.checked = r.criteres.indexOf(cb.value) >= 0; });
     $('critere-libre').value = '';
     // Agence rattachée à la commune souhaitée
-    var lieu = (r.lieu || '').toLowerCase();
+    var lieu = (r.lieu || '').replace(/\s(?:ou|et)\s.*$/, '').toLowerCase();
     reglages.agences.forEach(function (a, i) {
       if ((a.communes || []).some(function (c) { return c.trim().toLowerCase() === lieu; })) $('agence').value = i;
     });

@@ -130,13 +130,28 @@ afin que mes enfants puissent grandir. Je souhaiterais que ce logement puisse ê
 assert.equal(x.designation, 'Monsieur NASSERI Faridoum');
 assert.equal(x.numero, '059102384157559900');
 assert.equal(x.fonction, 'demandeur');
-assert.equal(x.lieu, 'Lille');
+assert.equal(x.lieu, 'Lille ou dans ses environs');
 assert.ok(!x.criteres.includes('asc'));
 assert.ok(x.criteres.includes('maison') && x.criteres.includes('ext'));
 const dir = L.generer({ ...x, typologie: '5', criteresTextes: [], agence: { nom: 'Lille' } });
 assert.ok(dir.includes('\nMonsieur,\n'));
-assert.ok(dir.includes('vous avez exprimé le souhait d\'obtenir un logement de type 5 à Lille.'));
+assert.ok(dir.includes('vous avez exprimé le souhait d\'obtenir un logement de type 5 à Lille ou dans ses environs.'));
 assert.ok(dir.includes('vous serez directement contacté par'));
 assert.ok(dir.includes('Je vous prie d\'agréer, Monsieur, l\'expression de mes salutations distinguées.'));
 assert.ok(L.generer({ ...x, profil: 'MF', agence: {} }).includes('\nMadame, Monsieur,\n'));
+// Courriers du Maire de Lille (Q_12198, Q_12192) : secteur, environs, « métropole » n'est pas « métro »
+x = cas(`Mon attention a été attirée sur la demande de logement de Madame Elisa Humetz, domiciliée 22/6 place du Marché aux Chevaux
+à Fruges (62310). l'intéressée a récemment déposé un dossier, enregistré sous le numéro départemental unique
+0590826031788GDPUB, en vue de l'attribution d'un T3 ou T4 dans la région et de préférence au sein de la métropole lilloise.
+ne disposant pas du permis de conduire, elle privilégie les communes bien desservies par les transports en commun. LE MAIRE`);
+assert.equal(x.designation, 'Madame Elisa Humetz'); assert.equal(x.profil, 'F');
+assert.equal(x.numero, '0590826031788GDPUB'); assert.equal(x.typologie, '3 ou 4');
+assert.equal(x.lieu, 'dans la métropole lilloise'); assert.equal(x.fonction, 'maire');
+assert.deepEqual(x.criteres, ['bus']);
+assert.ok(L.generer({ ...x, criteresTextes: [], agence: {} }).includes('logement de type 3 ou 4 dans la métropole lilloise.'));
+x = cas(`HOTEL DE VILLE. Mon attention a été attirée sur la demande de logement de Monsieur Hamid Boutarit, hébergé depuis plusieurs années.
+Il a déposé un dossier, enregistré sous le numéro départemental unique 0590823827278GDPUB, en vue de l'attribution d'un appartement
+de type 2 à Lille ou ses environs, et dans un immeuble pourvu d'un ascenseur s'il est situé à l'étage. Monsieur Boutarit aspire à stabiliser sa situation.`);
+assert.equal(x.designation, 'Monsieur Hamid Boutarit'); assert.equal(x.typologie, '2');
+assert.equal(x.lieu, 'Lille ou ses environs'); assert.deepEqual(x.criteres, ['asc']);
 console.log('OK');
