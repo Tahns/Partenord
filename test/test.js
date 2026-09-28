@@ -121,4 +121,22 @@ assert.equal(x.designation, 'Monsieur Jean VIDAL'); assert.equal(x.fonction, 'ma
 x = cas("Le Maire de Lille. la situation de Madame Julie MAIRESSE qui souhaite un F3 à Lomme, conseillère en insertion.");
 assert.equal(x.designation, 'Madame Julie MAIRESSE'); assert.ok(!x.elueFem);
 assert.equal(L.dateLongue(new Date(2026, 9, 1)), '1er Octobre 2026');
+// Courrier écrit par le demandeur lui-même (numéro tout en chiffres, négations)
+x = cas(`Monsieur NASSERI Faridoum 16 rue d'Aquitaine 59760 Grande-Synthe Numéro unique de demande : 059102384157559900
+Madame, Monsieur, Je me permets de vous adresser ce courrier afin d'attirer votre attention sur ma demande de logement.
+Je réside actuellement à Grande-Synthe, dans un appartement sans ascenseur ni balcon. Je suis père de huit enfants.
+Je suis actuellement en activité professionnelle à la mairie de Grande-Synthe. Je souhaiterais une maison avec un extérieur
+afin que mes enfants puissent grandir. Je souhaiterais que ce logement puisse être situé à Lille ou dans ses environs.`);
+assert.equal(x.designation, 'Monsieur NASSERI Faridoum');
+assert.equal(x.numero, '059102384157559900');
+assert.equal(x.fonction, 'demandeur');
+assert.equal(x.lieu, 'Lille');
+assert.ok(!x.criteres.includes('asc'));
+assert.ok(x.criteres.includes('maison') && x.criteres.includes('ext'));
+const dir = L.generer({ ...x, typologie: '5', criteresTextes: [], agence: { nom: 'Lille' } });
+assert.ok(dir.includes('\nMonsieur,\n'));
+assert.ok(dir.includes('vous avez exprimé le souhait d\'obtenir un logement de type 5 à Lille.'));
+assert.ok(dir.includes('vous serez directement contacté par'));
+assert.ok(dir.includes('Je vous prie d\'agréer, Monsieur, l\'expression de mes salutations distinguées.'));
+assert.ok(L.generer({ ...x, profil: 'MF', agence: {} }).includes('\nMadame, Monsieur,\n'));
 console.log('OK');

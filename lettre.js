@@ -23,7 +23,9 @@
     ministre:   { label: 'Ministre',                 m: 'Monsieur le Ministre',                 f: 'Madame la Ministre' },
     president:  { label: 'Président(e)',             m: 'Monsieur le Président',                f: 'Madame la Présidente' },
     conseiller: { label: 'Conseiller(ère) départemental(e)', m: 'Monsieur le Conseiller départemental', f: 'Madame la Conseillère départementale' },
-    autre:      { label: 'Autre (Madame, Monsieur)', m: 'Madame, Monsieur',                     f: 'Madame, Monsieur' }
+    autre:      { label: 'Autre (Madame, Monsieur)', m: 'Madame, Monsieur',                     f: 'Madame, Monsieur' },
+    // Courrier écrit par le demandeur lui-même : réponse qui lui est adressée directement
+    demandeur:  { label: 'Le demandeur lui-même (réponse directe)', m: '', f: '' }
   };
 
   // ---------- Critères de recherche fréquents ----------
@@ -35,7 +37,9 @@
     { id: 'asc',     texte: 'desservi par un ascenseur',              re: /ascenseur/i },
     { id: 'pmr',     texte: 'adapté à une personne à mobilité réduite', re: /mobilit[ée] r[ée]duite|\bPMR\b|fauteuil roulant|handicap/i },
     { id: 'ecole',   texte: 'à proximité des écoles',                 re: /[ée]coles?\b|scolaris/i },
-    { id: 'jardin',  texte: 'avec jardin',                            re: /jardin/i }
+    { id: 'jardin',  texte: 'avec jardin',                            re: /jardin/i },
+    { id: 'maison',  texte: 'en maison individuelle',                 re: /\bmaisons?\b(?! de (?:quartier|retraite|sant[ée]|la))/i },
+    { id: 'ext',     texte: 'avec un extérieur',                      re: /\bext[ée]rieur\b|balcon|terrasse/i }
   ];
 
   var MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
@@ -165,10 +169,10 @@
   function extraireNumero(t) {
     // Supprime les espaces parasites de l'OCR à l'intérieur des nombres
     var s = t.replace(/(\d)[ .](?=\d)/g, '$1');
-    var re = /\b(0[0-9OSIlB]{11,14})\s?([A-Z]{3,6})\b/g, m, best = null;
+    // Deux formes : chiffres + lettres (0590423808575GDPUB) ou uniquement des chiffres (059102384157559900)
+    var re = /\b(?:(0[0-9OSIlB]{11,14})\s?([A-Z]{3,6})|(0\d{15,19}))\b/g, m, best = null;
     while ((m = re.exec(s))) {
-      var chiffres = m[1].replace(/O/g, '0').replace(/S/g, '5').replace(/[Il]/g, '1').replace(/B/g, '8');
-      var num = chiffres + m[2];
+      var num = m[3] || m[1].replace(/O/g, '0').replace(/S/g, '5').replace(/[Il]/g, '1').replace(/B/g, '8') + m[2];
       var contexte = s.slice(Math.max(0, m.index - 80), m.index);
       var score = /num[ée]ro|unique|NUR|enregistr|dossier/i.test(contexte) ? 2 : 1;
       if (!best || score > best.score) best = { num: num, score: score };
@@ -246,13 +250,29 @@
     return { fonction: best.fonction, fem: fem };
   }
 
+  // Critère cité autrement que sous une négation (« sans ascenseur ni balcon » décrit le logement actuel)
+  function critereDemande(t, re) {
+    var g = new RegExp(re.source, 'gi'), m;
+    while ((m = g.exec(t))) {
+      if (!/\b(?:sans|ni|pas d'|pas de|aucun|aucune)\s(?:\S+\s){0,2}$/i.test(t.slice(Math.max(0, m.index - 30), m.index))) return true;
+    }
+    return false;
+  }
+
+  // Courrier écrit par le demandeur (« ma demande », « je réside »…) plutôt que par un élu
+  function ecritParDemandeur(t) {
+    var signes = t.match(/\b(?:ma demande|mon dossier|ma situation|ma famille|mes enfants|mon logement|je r[ée]side|mon foyer|ma candidature|mon épouse|mon mari|ma conjointe|mon conjoint)\b/gi) || [];
+    var tiers = /(?:attention|situation|demande) (?:de|sur la situation de|sur la demande de) (?:M\.|Mme|Monsieur|Madame|Mademoiselle)\b/i.test(t);
+    return signes.length >= 2 && !tiers;
+  }
+
   // options.exclus : noms à ne jamais retenir comme demandeur (ex. signataire de la réponse)
   function extraire(texteBrut, options) {
     var t = normaliser(texteBrut);
     var dem = extraireDemandeurs(t, (options || {}).exclus);
     var typo = extraireTypologie(t);
     var lieu = extraireLieu(t, typo ? typo.index : null);
-    var fct = extraireFonction(t);
+    var fct = ecritParDemandeur(t) ? { fonction: 'demandeur', fem: false } : extraireFonction(t);
     return {
       designation: dem ? dem.designation : '',
       profil: dem ? dem.profil : 'MF',
@@ -262,7 +282,7 @@
       fonction: fct.fonction,
       elueFem: fct.fem,
       mutation: /\bmutation\b/i.test(t),
-      criteres: CRITERES.filter(function (c) { return c.re.test(t); }).map(function (c) { return c.id; }),
+      criteres: CRITERES.filter(function (c) { return critereDemande(t, c.re); }).map(function (c) { return c.id; }),
       texte: t
     };
   }
@@ -290,6 +310,8 @@
     var crit = (d.criteresTextes || []).filter(Boolean);
     var agence = d.agence || {};
     var nomAgence = agence.nom || '[AGENCE]';
+
+    if (d.fonction === 'demandeur') return genererDirect(d, p, D, nature, typo, lieu, crit, agence, nomAgence, acc);
 
     var souhait = 'le souhait d\'obtenir un logement de type ' + typo +
       (lieu ? ' ' + (/^[\u0001]?(à|a|sur|dans|en|au|aux)\s/i.test(lieu) ? lieu : 'à ' + lieu) : '') +
@@ -323,6 +345,44 @@
     lignes.push('', '');
     (d.signature || 'Eric COJON\nDirecteur Général\n#signature#').split('\n').forEach(function (l) { lignes.push(l); });
 
+    return lignes.join('\n');
+  }
+
+  // Réponse adressée directement au demandeur (vouvoiement)
+  var APPEL_DIRECT = { M: 'Monsieur', F: 'Madame', MF: 'Madame, Monsieur', MM: 'Messieurs', FF: 'Mesdames' };
+  function formuleSouhait(typo, lieu, crit) {
+    return 'le souhait d\'obtenir un logement de type ' + typo +
+      (lieu ? ' ' + (/^[\u0001]?(à|a|sur|dans|en|au|aux)\s/i.test(lieu) ? lieu : 'à ' + lieu) : '') +
+      (crit.length ? ' ' + joindre(crit) : '') + '.';
+  }
+  function genererDirect(d, p, D, nature, typo, lieu, crit, agence, nomAgence, acc) {
+    var appel = APPEL_DIRECT[d.profil] || APPEL_DIRECT.MF;
+    var lignes = [];
+    lignes.push((d.ville || 'Lille') + ', le ' + (d.date || dateLongue(new Date())));
+    lignes.push('', '');
+    lignes.push('Nos réf. : ' + (d.reference || ''));
+    lignes.push('Affaire suivie par : ' + (d.suiviPar || ''));
+    lignes.push('');
+    lignes.push('Objet : Demande de ' + nature + ' pour ' + D + (d.numero ? ' - ' + d.numero : ''));
+    lignes.push('', '');
+    lignes.push(appel + ',');
+    lignes.push('');
+    lignes.push('J\'ai bien pris connaissance de votre courrier relatif à votre demande de ' + nature + '.');
+    lignes.push('');
+    lignes.push('Après examen de votre requête, je vous confirme que vous avez exprimé ' + formuleSouhait(typo, lieu, crit));
+    lignes.push('Conformément aux procédures en vigueur, votre dossier sera présenté à la Commission d\'Attribution des Logements et d\'Examen de l\'Occupation des Logements ( CALEOL ) de l\'agence de ' + nomAgence +
+      ' dès qu\'un logement correspondant à vos critères de recherche sera disponible.');
+    lignes.push('');
+    lignes.push('Le cas échéant, vous serez directement contacté' + acc + ' par l\'un de nos conseillers commerciaux afin de convenir d\'un rendez-vous.');
+    lignes.push('');
+    lignes.push('Vous avez également la possibilité de vous rapprocher de l\'accueil de l\'agence de ' + nomAgence +
+      (agence.adresse ? ', situé au ' + agence.adresse : '') +
+      (agence.horaires ? ', ouverte ' + agence.horaires : '') +
+      ', pour tout renseignement relatif au suivi de votre demande.');
+    lignes.push('');
+    lignes.push('Je vous prie d\'agréer, ' + appel + ', l\'expression de mes salutations distinguées.');
+    lignes.push('', '');
+    (d.signature || 'Eric COJON\nDirecteur Général\n#signature#').split('\n').forEach(function (l) { lignes.push(l); });
     return lignes.join('\n');
   }
 
