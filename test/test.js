@@ -205,4 +205,7 @@ Directeur Général
 const sh = (log) => L.generer({ typologie: '3', lieu: 'Lille', criteresLogement: log, agence: {} }).split('\n').find(l => /souhait/.test(l));
 assert.ok(sh(['en maison individuelle', 'avec un extérieur']).includes('type 3 en maison individuelle avec un extérieur à Lille.'));
 assert.ok(sh(['en rez-de-chaussée', 'avec ascenseur']).includes('type 3 en rez-de-chaussée avec ascenseur à Lille.'));
+// Nom écrit de deux façons (erreur de lecture) : signalé
+assert.deepEqual(L.extraire('Monsieur NASSERI Faridourm 16 rue X. ma demande, ma situation. NASSERI Faridoum').variantes, ['Faridoum']);
+assert.deepEqual(L.extraire('la demande de Monsieur Hamid Boutarit. Monsieur Boutarit aspire à stabiliser').variantes, []);
 console.log('OK');

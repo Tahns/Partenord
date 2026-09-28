@@ -284,6 +284,38 @@
   }
 
   // options.exclus : noms à ne jamais retenir comme demandeur (ex. signataire de la réponse)
+  // Distance d'édition (nombre de lettres à changer) entre deux mots
+  function distance(a, b) {
+    var d = [], i, j;
+    for (i = 0; i <= a.length; i++) d[i] = [i];
+    for (j = 0; j <= b.length; j++) d[0][j] = j;
+    for (i = 1; i <= a.length; i++) for (j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+
+  // Même nom écrit autrement ailleurs dans le courrier (« NASSERI Faridourm » / « NASSERI Faridoum ») :
+  // souvent une erreur de lecture, à signaler à l'agent
+  function variantesNom(t, designation) {
+    var mots = designation.split(' ').filter(function (w) { return w.length >= 4 && !MOTS_EXCLUS.test(w); });
+    if (mots.length < 2) return [];
+    var jetons = t.split(/[\s,.;:()]+/), vus = {};
+    for (var k = 0; k + 1 < jetons.length; k++) {
+      var a = jetons[k], b = jetons[k + 1];
+      // un mot du nom suivi ou précédé d'un mot presque identique à un autre mot du nom
+      mots.forEach(function (m1) {
+        mots.forEach(function (m2) {
+          if (m1 === m2) return;
+          [[a, b], [b, a]].forEach(function (p) {
+            if (p[0].toLowerCase() === m1.toLowerCase() && p[1] !== m2 && p[1].length >= 4 &&
+                distance(p[1].toLowerCase(), m2.toLowerCase()) <= 2) vus[p[1]] = true;
+          });
+        });
+      });
+    }
+    return Object.keys(vus);
+  }
+
   function extraire(texteBrut, options) {
     var t = normaliser(texteBrut);
     var dem = extraireDemandeurs(t, (options || {}).exclus);
@@ -292,6 +324,7 @@
     var fct = ecritParDemandeur(t) ? { fonction: 'demandeur', fem: false } : extraireFonction(t);
     return {
       designation: dem ? dem.designation : '',
+      variantes: dem ? variantesNom(t, dem.designation).map(function (v) { return v; }) : [],
       profil: dem ? dem.profil : 'MF',
       numero: extraireNumero(t),
       typologie: typo ? typo.valeur : '',

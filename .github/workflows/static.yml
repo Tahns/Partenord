@@ -39,7 +39,7 @@ jobs:
       - name: Préparer les fichiers du site
         run: |
           mkdir _site
-          cp -r index.html app.js lettre.js favicon.svg vendor _site/
+          cp -r index.html app.js lettre.js favicon.svg logo.svg vendor _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
