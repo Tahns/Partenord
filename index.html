@@ -11,128 +11,154 @@
 <style>
   /* Couleurs Partenord : bleu marine en couleur principale, rouge-orangé et vert en touches */
   :root {
-    --bg: #f3f4f8; --card: #fff; --ink: #1d1e3f; --muted: #5f6180; --line: #e1e3ec;
-    --accent: #e3401a; --accent-ink: #fff; --accent-soft: #fdf0eb;
-    --vert: #5dbb9a; --vert-soft: #e8f5ef; --marine: #2e2f86; --marine-fonce: #23246b; --marine-ink: #fff;
-    --marine-soft: #ecedf8; --ok: #23835f; --warn: #d9794f; --warn-soft: #fff8f5; --focus: #2e2f86;
-    --ombre: 0 1px 2px rgba(29,30,63,.06), 0 2px 8px rgba(29,30,63,.05);
+    --bg: #f6f7fa; --card: #fff; --ink: #1d1e3f; --muted: #6b6d88; --line: #e6e8ef; --champ: #fbfbfd;
+    --accent: #e3401a; --vert: #5dbb9a; --vert-soft: #e8f5ef;
+    --marine: #2e2f86; --marine-fonce: #23246b; --marine-ink: #fff; --marine-soft: #eeeff9;
+    --ok: #23835f; --warn: #d9794f; --warn-soft: #fff8f5; --focus: rgba(46,47,134,.18);
+    --ombre: 0 1px 2px rgba(29,30,63,.04), 0 4px 16px rgba(29,30,63,.04);
+    --rayon: 12px;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #13142b; --card: #1c1d3a; --ink: #e9eaf5; --muted: #a3a5c4; --line: #2f3160;
-      --accent-soft: #3d2019; --vert-soft: #1b3a30; --marine: #8f91e8; --marine-fonce: #a9abf0; --marine-ink: #13142b;
-      --marine-soft: #262852; --warn-soft: #33241d; --ok: #6fd1ac; --warn: #e89a78; --focus: #8f91e8;
-      --ombre: none; }
+    :root { --bg: #121327; --card: #1b1c36; --ink: #e9eaf5; --muted: #9a9cbd; --line: #2b2d55; --champ: #17182f;
+      --vert-soft: #1b3a30; --marine: #9597ea; --marine-fonce: #aeb0f0; --marine-ink: #121327; --marine-soft: #25274f;
+      --ok: #6fd1ac; --warn: #e89a78; --warn-soft: #2e221d; --focus: rgba(149,151,234,.25); --ombre: none; }
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
-  body.verrouille > header, body.verrouille > main, body.verrouille > dialog { display: none !important; }
-  #verrou { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
-  #verrou form { width: min(340px, 100%); text-align: center; padding: 28px 24px; }
-  #verrou h1 { font-size: 18px; color: var(--marine); margin: 12px 0 16px; }
-  #verrou label { text-align: left; }
-  #verrou input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink);
-    font: inherit; font-size: 20px; letter-spacing: .3em; text-align: center; }
-  #verrou button { width: 100%; margin-top: 12px; }
-  #verrou p { color: #c0391a; font-size: 13px; min-height: 18px; margin: 10px 0 0; }
   body { margin: 0; background: var(--bg); color: var(--ink);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { padding: 23px 24px 18px; border-bottom: 1px solid var(--line);
-    background: linear-gradient(90deg, var(--accent) 0 34%, var(--vert) 34% 67%, #2e2f86 67%) top / 100% 5px no-repeat, var(--card);
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  header h1 { font-size: 18px; margin: 0; color: var(--marine); }
-  header p { margin: 0; color: var(--muted); font-size: 13px; }
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+
+  /* Écran du code d'accès */
+  body.verrouille > header, body.verrouille > main, body.verrouille > footer, body.verrouille > dialog { display: none !important; }
+  #verrou { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+  #verrou form { width: min(320px, 100%); text-align: center; padding: 36px 28px 28px; }
+  #verrou h1 { font-size: 17px; font-weight: 600; margin: 14px 0 22px; }
+  #verrou label { text-align: left; }
+  #verrou input { font-size: 20px; letter-spacing: .3em; text-align: center; }
+  #verrou button { width: 100%; margin-top: 14px; }
+  #verrou p { color: #c0391a; font-size: 13px; min-height: 18px; margin: 10px 0 0; }
+
+  /* En-tête */
+  header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 20px; padding: 10px 24px; }
+  header::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent) 0 33.3%, var(--vert) 0 66.6%, #2e2f86 0); }
+  header .marque { display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -.01em; }
   header .spacer { flex: 1; }
-  main { display: grid; grid-template-columns: minmax(340px, 440px) 1fr; gap: 20px; padding: 20px 24px;
-    max-width: 1400px; margin: 0 auto; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 14px 16px; } }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px; box-shadow: var(--ombre); }
-  .card + .card { margin-top: 16px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--marine); margin: 0 0 14px;
-    padding-left: 10px; border-left: 3px solid var(--accent); line-height: 1.2; }
-  .onglets { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
-  .onglets button { border: 0; background: none; padding: 6px 12px; font-weight: 600; color: var(--muted); }
-  .onglets button[aria-pressed=true] { background: var(--card); color: var(--marine); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
-  .depot { border: 2px dashed var(--line); border-radius: 10px; padding: 26px 16px; text-align: center; cursor: pointer; transition: .15s; }
-  .depot.over, .depot:hover { border-color: var(--marine); background: var(--marine-soft); }
-  .depot strong { display: block; font-size: 16px; }
-  .depot span { color: var(--muted); font-size: 13px; }
-  .etat { margin-top: 10px; font-size: 13px; color: var(--muted); min-height: 20px; }
-  .feuille { font: 14px/1.55 Calibri, Carlito, Arial, sans-serif; background: #fff; color: #111; border: 1px solid var(--line); border-radius: 6px; padding: 32px 48px; min-height: 600px; }
+  .logo { flex: none; background: #fff; border-radius: 8px; padding: 3px 6px; box-sizing: content-box; }
+  .onglets { display: flex; gap: 2px; background: var(--bg); border-radius: 10px; padding: 3px; }
+  .onglets button { border: 0; background: none; padding: 6px 14px; font-weight: 500; color: var(--muted); border-radius: 8px; }
+  .onglets button:hover { color: var(--ink); background: none; }
+  .onglets button[aria-pressed=true] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(29,30,63,.1); }
+
+  /* Mise en page */
+  main { display: grid; grid-template-columns: minmax(340px, 420px) 1fr; gap: 24px; padding: 24px;
+    max-width: 1320px; margin: 0 auto; align-items: start; }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; padding: 16px; gap: 16px; }
+    header { padding: 10px 16px; gap: 12px; flex-wrap: wrap; }
+    .onglets { order: 3; flex: 1 1 100%; }
+    .onglets button { flex: 1; padding: 6px 8px; white-space: nowrap; }
+  }
+  .card { background: var(--card); border-radius: var(--rayon); padding: 22px; box-shadow: var(--ombre); border: 1px solid var(--line); }
+  .card + .card { margin-top: 20px; }
+  h2 { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; margin: 0 0 16px; }
+  h2 .num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--marine-soft); color: var(--marine); font-size: 12px; font-weight: 700; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 4px 16px 28px; }
+
+  /* Zone de dépôt */
+  #drop, .depot { border: 1.5px dashed var(--line); border-radius: 10px; padding: 28px 16px; text-align: center;
+    cursor: pointer; transition: border-color .15s, background .15s; background: var(--champ); }
+  #drop.over, #drop:hover, .depot.over, .depot:hover { border-color: var(--marine); background: var(--marine-soft); }
+  #drop strong, .depot strong { display: block; font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  #drop span, .depot span { color: var(--muted); font-size: 12.5px; }
+  #etat, .etat { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  #etat:empty, .etat:empty { display: none; }
+  progress { width: 100%; height: 4px; accent-color: var(--marine); }
+
+  /* Champs */
+  label { display: block; font-size: 12.5px; font-weight: 500; color: var(--muted); margin: 14px 0 5px; }
+  label small { font-weight: 400; opacity: .8; }
+  input[type=text], input[type=password], select, textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--champ); color: var(--ink); font: inherit; transition: border-color .15s, box-shadow .15s; }
+  input:hover, select:hover, textarea:hover { border-color: #cfd2df; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--marine); box-shadow: 0 0 0 3px var(--focus); background: var(--card); }
+  .manquant { border-color: var(--warn) !important; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 99px; color: var(--ink);
+    padding: 5px 12px; font-size: 13px; cursor: pointer; user-select: none; font-weight: 400; margin: 0; background: var(--champ); }
+  .chip:has(input:checked) { background: var(--vert-soft); border-color: var(--vert); }
+  .chip input { margin: 0; accent-color: var(--ok); }
+  .seg { display: flex; flex-wrap: wrap; gap: 2px; background: var(--bg); border-radius: 9px; padding: 3px; }
+  .seg label { margin: 0; flex: 1 1 auto; text-align: center; font-weight: 500; cursor: pointer; padding: 6px 10px;
+    font-size: 13px; white-space: nowrap; border-radius: 7px; color: var(--muted); }
+  .seg label:hover { color: var(--ink); }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label:has(input:checked) { background: var(--card); color: var(--marine); box-shadow: 0 1px 3px rgba(29,30,63,.12); }
+  .seg label:has(input:focus-visible) { box-shadow: 0 0 0 3px var(--focus); }
+
+  /* Boutons */
+  button { font: inherit; font-weight: 500; cursor: pointer; border-radius: 8px; padding: 8px 14px; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); transition: background .15s, border-color .15s; }
+  button:hover { background: var(--bg); }
+  button:disabled { cursor: default; opacity: .6; }
+  button.primary { background: var(--marine); color: var(--marine-ink); border-color: var(--marine); font-weight: 600; }
+  button.primary:hover { background: var(--marine-fonce); border-color: var(--marine-fonce); }
+  button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .actions .ok { color: var(--ok); font-size: 13px; font-weight: 600; }
+
+  /* Courrier et pouvoir */
+  #lettre { white-space: pre-wrap; font: 14px/1.6 Roboto, Arial, sans-serif; background: #fff; color: #111;
+    border: 1px solid var(--line); border-radius: 10px; padding: 40px 48px; min-height: 600px; }
+  @media (max-width: 600px) { #lettre, .feuille { padding: 20px; } }
+  #lettre .var, .feuille .var { background: #e3f3ec; border-radius: 3px; }
+  #lettre .trou, .feuille .trou { background: #ffe0e0; color: #8a1111; border-radius: 3px; }
+  .feuille { font: 14px/1.55 Calibri, Carlito, Arial, sans-serif; background: #fff; color: #111; border: 1px solid var(--line);
+    border-radius: 10px; padding: 36px 48px; min-height: 600px; }
   .feuille .logo-doc { display: block; margin: 0 auto 18px; width: 120px; }
   .feuille .entete { font-size: 12px; white-space: pre-line; margin: 0 0 20px; }
   .feuille .entete::first-line { font-weight: 700; }
   .feuille h3 { text-align: center; font-size: 20px; margin: 24px 0; }
   .feuille p { text-align: justify; margin: 0 0 14px; }
   .feuille .signature { margin: 28px 0 0 55%; text-align: left; white-space: pre-line; }
-  .feuille .var { background: #dff2ea; border-radius: 3px; }
-  .feuille .trou { background: #ffd6d6; color: #8a1111; border-radius: 3px; }
-  #drop { border: 2px dashed var(--line); border-radius: 10px; padding: 26px 16px; text-align: center;
-    cursor: pointer; transition: .15s; }
-  #drop.over, #drop:hover { border-color: var(--marine); background: var(--marine-soft); }
-  #drop strong { display: block; font-size: 16px; }
-  #drop span { color: var(--muted); font-size: 13px; }
-  #etat { margin-top: 10px; font-size: 13px; color: var(--muted); min-height: 20px; }
-  progress { width: 100%; height: 6px; accent-color: var(--marine); }
-  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
-  label small { font-weight: 400; color: var(--muted); }
-  input[type=text], select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
-    border-radius: 6px; background: var(--card); color: var(--ink); font: inherit; }
-  input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: -1px; }
-  .manquant { border-color: var(--warn) !important; background: var(--warn-soft) !important; box-shadow: inset 3px 0 var(--warn); }
-  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 99px;
-    padding: 4px 10px; font-size: 13px; cursor: pointer; user-select: none; font-weight: 400; margin: 0; }
-  .chip:has(input:checked) { background: var(--vert-soft); border-color: var(--vert); }
-  .chip input { margin: 0; accent-color: var(--ok); }
-  .seg { display: flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  .seg label { margin: 0; flex: 1 1 auto; text-align: center; font-weight: 500; cursor: pointer; padding: 7px 8px;
-    border-right: 1px solid var(--line); font-size: 13px; white-space: nowrap; }
-  .seg label:last-child { border-right: 0; }
-  .seg input { position: absolute; opacity: 0; pointer-events: none; }
-  .seg label:has(input:checked) { background: var(--marine); color: var(--marine-ink); }
-  .seg label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
-  button { font: inherit; cursor: pointer; border-radius: 6px; padding: 8px 14px; border: 1px solid var(--line);
-    background: var(--card); color: var(--ink); }
-  button:hover { border-color: var(--marine); }
-  button.primary { background: var(--marine); color: var(--marine-ink); border-color: var(--marine); font-weight: 600; }
-  button.primary:hover { background: var(--marine-fonce); border-color: var(--marine-fonce); }
-  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  .actions .ok { color: var(--ok); font-size: 13px; font-weight: 600; }
-  #lettre { white-space: pre-wrap; font: 14px/1.55 Roboto, Arial, sans-serif; background: #fff; color: #111;
-    border: 1px solid var(--line); border-radius: 6px; padding: 32px 40px; min-height: 600px; }
-  @media (max-width: 600px) { #lettre { padding: 18px; } }
-  #lettre .var { background: #dff2ea; border-radius: 3px; }
-  #lettre .trou { background: #ffd6d6; color: #8a1111; border-radius: 3px; }
-  details { margin-top: 12px; }
+
+  /* Éléments repliables, aides, alertes */
+  details { margin-top: 14px; }
   summary { cursor: pointer; font-size: 13px; color: var(--muted); }
-  details.essais { margin: 0 0 12px; }
+  summary:hover { color: var(--ink); }
   details textarea { min-height: 160px; font-size: 12px; margin-top: 8px; }
-  .aide { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .agence-ligne { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start;
-    border-top: 1px solid var(--line); padding: 10px 0; }
-  .agence-ligne:first-child { border-top: 0; }
-  .agence-ligne b { display: block; }
-  .agence-ligne span { font-size: 12px; color: var(--muted); display: block; }
-  dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink);
-    width: min(640px, calc(100vw - 32px)); padding: 20px; }
-  .logo { flex: none; box-sizing: content-box; background: #fff; border-radius: 10px; padding: 5px 9px; }
-  .alerte { background: var(--warn-soft); border: 1px solid var(--warn); border-radius: 6px; padding: 8px 10px; font-size: 13px; margin: 0 0 8px; }
+  details.essais { margin: -4px 0 16px; }
+  .aide { font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+  .alerte { background: var(--warn-soft); border: 1px solid var(--warn); border-radius: 8px; padding: 9px 12px; font-size: 13px; margin: 0 0 8px; }
+
+  /* Liste des courriers déposés */
   #bloc-courriers { margin-top: 12px; }
-  .compte { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
-  #liste-courriers { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; max-height: 260px; overflow: auto; }
+  .compte { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+  #liste-courriers { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; max-height: 260px; overflow: auto; }
   #liste-courriers li { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding: 0 6px 0 0; }
   #liste-courriers li:first-child { border-top: 0; }
-  #liste-courriers li > button:first-child { flex: 1; text-align: left; border: 0; border-radius: 0; background: none; padding: 7px 10px; min-width: 0; }
-  #liste-courriers li > button:first-child b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #liste-courriers li > button:first-child { flex: 1; text-align: left; border: 0; border-radius: 0; background: none; padding: 8px 12px; min-width: 0; }
+  #liste-courriers li > button:first-child b { display: block; font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #liste-courriers li > button:first-child span { display: block; font-size: 12px; color: var(--muted); }
   #liste-courriers li.actif { background: var(--marine-soft); box-shadow: inset 3px 0 var(--marine); }
   #liste-courriers em { font-style: normal; font-size: 12px; color: var(--muted); white-space: nowrap; }
   #liste-courriers li.copie em { color: var(--ok); font-weight: 600; }
   #liste-courriers li.erreur em { color: var(--warn); }
   #liste-courriers .suppr { border: 0; background: none; padding: 2px 6px; color: var(--muted); font-size: 16px; }
-  dialog::backdrop { background: rgba(0,0,0,.35); }
+
+  /* Réglages */
+  dialog { border: 0; border-radius: 14px; background: var(--card); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    width: min(620px, calc(100vw - 32px)); padding: 26px; }
+  dialog::backdrop { background: rgba(18,19,39,.4); }
+  dialog h2 { margin-bottom: 8px; }
+  .agence-ligne { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; border-top: 1px solid var(--line); padding: 10px 0; }
+  .agence-ligne:first-child { border-top: 0; }
+  .agence-ligne b { display: block; font-weight: 600; }
+  .agence-ligne span { font-size: 12px; color: var(--muted); display: block; }
 </style>
 </head>
 <body class="verrouille">
@@ -147,23 +173,22 @@
   </form>
 </div>
 <header>
-  <img src="logo.svg" alt="" width="30" height="46" class="logo">
-  <div>
-    <h1>Courriers : demandes de logement et conciliations</h1>
-    <p>Déposez les courriers reçus : la réponse ou le pouvoir est prêt en quelques secondes. Tout reste sur votre poste, rien n'est envoyé sur internet.</p>
+  <div class="marque">
+    <img src="logo.svg" alt="" width="18" height="28" class="logo">
+    <h1>Courriers</h1>
   </div>
   <nav class="onglets" aria-label="Type de courrier">
     <button type="button" data-vue="logement" aria-pressed="true">Demandes de logement</button>
-    <button type="button" data-vue="conciliation" aria-pressed="false">Conciliations (pouvoir)</button>
+    <button type="button" data-vue="conciliation" aria-pressed="false">Conciliations</button>
   </nav>
   <div class="spacer"></div>
-  <button type="button" id="btn-reglages">Réglages (signataire, agences…)</button>
+  <button type="button" id="btn-reglages" title="Signataire, agences…">Réglages</button>
 </header>
 
 <main id="vue-logement">
   <section>
     <div class="card">
-      <h2>1. Courrier reçu</h2>
+      <h2><span class="num">1</span>Courrier reçu</h2>
       <div id="drop" tabindex="0" role="button" aria-label="Déposer un courrier PDF ou une image">
         <strong>Glissez les PDF ici</strong>
         <span>un ou plusieurs courriers, ou cliquez pour les choisir (PDF scanné, PDF texte, JPG, PNG)</span>
@@ -182,7 +207,7 @@
     </div>
 
     <div class="card">
-      <h2>2. Vérifier les informations</h2>
+      <h2><span class="num">2</span>Vérifier les informations</h2>
       <p id="alerte" class="alerte" role="status" hidden></p>
 
       <label>Profil du / des demandeur(s) <small>(accords automatiques)</small></label>
@@ -247,15 +272,15 @@
 
   <section>
     <div class="card">
-      <h2>3. Réponse</h2>
+      <h2><span class="num">3</span>Réponse</h2>
       <div class="actions">
         <button type="button" class="primary" data-copie="tout">Copier tout le courrier</button>
-        <button type="button" data-copie="corps">Copier sans l'en-tête (à partir de la formule d'appel)</button>
+        <button type="button" data-copie="corps" title="À partir de la formule d'appel">Copier sans l'en-tête</button>
         <button type="button" data-copie="objet">Copier l'objet</button>
         <span class="ok" id="copie-ok" aria-live="polite"></span>
       </div>
       <details class="essais">
-        <summary>Essais de collage dans le logiciel (mise en page)</summary>
+        <summary>Essais de collage dans le logiciel</summary>
         <p class="aide">Chaque bouton copie tout le courrier dans un format différent. Collez-les un par un dans le logiciel et notez celui qui donne la bonne mise en page.</p>
         <div class="actions">
           <button type="button" data-essai="actuel">A — format actuel</button>
@@ -273,7 +298,7 @@
 <main id="vue-conciliation" hidden>
   <section>
     <div class="card">
-      <h2>1. Convocation du conciliateur</h2>
+      <h2><span class="num">1</span>Convocation du conciliateur</h2>
       <div id="c-drop" class="depot" tabindex="0" role="button" aria-label="Déposer une convocation PDF ou une image">
         <strong>Glissez la convocation ici</strong>
         <span>ou cliquez pour la choisir (PDF scanné, PDF texte, JPG, PNG)</span>
@@ -288,7 +313,7 @@
     </div>
 
     <div class="card">
-      <h2>2. Vérifier les informations</h2>
+      <h2><span class="num">2</span>Vérifier les informations</h2>
       <label for="c-demandeur">Demandeur <small>(civilité, prénom et nom)</small></label>
       <input type="text" id="c-demandeur" placeholder="Madame Marie DUPONT">
       <div class="row" style="grid-template-columns: 2fr 1fr">
@@ -318,7 +343,7 @@
 
   <section>
     <div class="card">
-      <h2>3. Pouvoir</h2>
+      <h2><span class="num">3</span>Pouvoir</h2>
       <div class="actions">
         <button type="button" class="primary" id="c-word">Télécharger le pouvoir (Word)</button>
         <button type="button" id="c-copier">Copier le texte</button>
@@ -329,6 +354,8 @@
     </div>
   </section>
 </main>
+
+<footer>Tout reste sur votre poste : aucun courrier n'est envoyé sur internet.</footer>
 
 <dialog id="reglages">
   <h2>Réglages</h2>
