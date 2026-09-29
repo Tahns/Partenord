@@ -13,12 +13,17 @@
     return Array.prototype.map.call(new Uint8Array(octets), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
   }
 
+  // Le code est saisi dans un champ texte masqué, pour que le navigateur ne propose pas
+  // de l'enregistrer ; sans masquage possible, on revient à un champ mot de passe.
+  if (!(window.CSS && CSS.supports('-webkit-text-security', 'disc'))) $('verrou-code').type = 'password';
+
   var essais = 0;
   $('verrou-form').addEventListener('submit', async function (e) {
     e.preventDefault();
     var champ = $('verrou-code'), bouton = this.querySelector('button');
     bouton.disabled = true;
     if (await empreinte(champ.value.trim()) === EMPREINTE) {
+      champ.value = '';
       document.body.classList.remove('verrouille');
       $('verrou').remove();
       return;

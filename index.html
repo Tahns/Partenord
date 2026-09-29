@@ -35,6 +35,8 @@
   #verrou h1 { font-size: 17px; font-weight: 600; margin: 14px 0 22px; }
   #verrou label { text-align: left; }
   #verrou input { font-size: 20px; letter-spacing: .3em; text-align: center; }
+  /* Champ texte masqué plutôt que « mot de passe » : le navigateur ne propose pas de l'enregistrer */
+  #verrou .masque { -webkit-text-security: disc; }
   #verrou button { width: 100%; margin-top: 14px; }
   #verrou p { color: #c0391a; font-size: 13px; min-height: 18px; margin: 10px 0 0; }
 
@@ -167,7 +169,7 @@
     <img src="logo.svg" alt="" width="34" height="52">
     <h1>Courriers Partenord</h1>
     <label for="verrou-code">Code d'accès</label>
-    <input type="password" id="verrou-code" inputmode="numeric" autocomplete="off" required>
+    <input type="text" id="verrou-code" class="masque" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" required>
     <button type="submit" class="primary">Entrer</button>
     <p id="verrou-message" role="alert"></p>
   </form>
