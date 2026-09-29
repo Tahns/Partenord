@@ -44,7 +44,8 @@ presse-papiers et les fichiers Word téléchargés, là où l'agent les a mis.
 ## Code d'accès
 
 Un code est demandé à chaque ouverture de la page (`verrou.js`, seule son empreinte
-SHA-256 y figure). C'est une simple barrière contre les visiteurs de passage : le code
+SHA-256 y figure). Il est saisi dans un champ masqué qui n'est pas un champ « mot de passe » :
+le navigateur ne propose donc pas de l'enregistrer. C'est une simple barrière contre les visiteurs de passage : le code
 du site étant public, ce n'est pas une protection forte — le site ne contient de toute
 façon aucune donnée. Pour changer le code : calculer
 `node -e "console.log(require('crypto').createHash('sha256').update('partenord-courriers:NOUVEAUCODE').digest('hex'))"`
