@@ -325,13 +325,21 @@
         return '<p style="' + style + '">' + (l.trim() ? echapper(l) : '&nbsp;') + '</p>';
       }).join('');
     }
-    // Format par défaut : un bloc <div> aligné à gauche par ligne. Le PGI les colle en
-    // un seul paragraphe à lignes serrées, sans grand espace ; la date et la signature
-    // sont décalées par des tabulations.
+    // Format par défaut : un bloc <div> par ligne. Le PGI les colle en un seul paragraphe
+    // à lignes serrées, mais le justifie et étire les lignes courtes (« Nos réf. »,
+    // « Monsieur le Maire, »…) : leurs espaces deviennent insécables, que la justification
+    // n'élargit pas. Le PGI ignore les tabulations : la date et la signature sont décalées
+    // par des espaces insécables.
     return '<div style="' + police + '">' + lignes.map(function (l, i) {
-      var tab = decale(l, i) ? '<span style="mso-tab-count:7;white-space:pre">\t\t\t\t\t\t\t</span>' : '';
-      return '<div style="margin:0cm;text-indent:0cm;text-align:left">' + (l.trim() ? tab + echapper(l) : '&nbsp;') + '</div>';
+      return '<div style="margin:0cm;text-indent:0cm;text-align:left">' + (l.trim() ? echapper(ligneFigee(l, decale(l, i))) : '&nbsp;') + '</div>';
     }).join('') + '</div>';
+  }
+
+  // Ligne courte (qui tient sur une ligne) : espaces insécables, et décalage éventuel
+  var LIGNE_COURTE = 90, RETRAIT = new Array(94).join('\u00a0');   // ≈ 9 cm en Roboto 11 pt
+  function ligneFigee(l, decale) {
+    if (l.length > LIGNE_COURTE) return l;
+    return (decale ? RETRAIT : '') + l.replace(/ /g, '\u00a0');
   }
 
   async function copierTexte(t, lettre, variante) {
@@ -345,7 +353,7 @@
     } else {
       if (!variante || variante === 'actuel') {
         var lignes = t.split('\n'), decale = aDecaler(lignes, lettre);
-        formats['text/plain'] = lignes.map(function (l, i) { return (decale(l, i) && l.trim() ? '\t\t\t\t\t\t\t' : '') + l; }).join('\n');
+        formats['text/plain'] = lignes.map(function (l, i) { return l.trim() ? ligneFigee(l, decale(l, i)) : l; }).join('\n');
       }
       formats['text/html'] = versHtml(t, lettre, variante);
     }
