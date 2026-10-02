@@ -335,11 +335,35 @@
     }).join('') + '</div>';
   }
 
-  // Ligne courte (qui tient sur une ligne) : espaces insécables, et décalage éventuel
-  var LIGNE_COURTE = 90, RETRAIT = new Array(94).join('\u00a0');   // ≈ 9 cm en Roboto 11 pt
+  // Le PGI justifie le paragraphe collé et étire toute ligne qui finit par un retour à
+  // la ligne : la dernière ligne de chaque paragraphe du courrier, et les lignes courtes.
+  // On calcule donc, avec la police Roboto du PGI, où il coupera les lignes, et la
+  // dernière ligne reçoit des espaces insécables, que la justification n'élargit pas.
+  // Largeur de la ligne du PGI, en cadratins (mesurée sur ses coupures de ligne).
+  var LARGEUR_LIGNE = 43.58;
+  var RETRAIT = new Array(94).join('\u00a0');   // ≈ 9 cm en Roboto 11 pt
+  var mesurer = null;
+  try {
+    var roboto = new FontFace('RobotoMesure', 'url(vendor/roboto/roboto-latin-400-normal.woff2)');
+    roboto.load().then(function () {
+      document.fonts.add(roboto);
+      var ctx = document.createElement('canvas').getContext('2d');
+      ctx.font = '100px RobotoMesure';
+      mesurer = function (t) { return ctx.measureText(t).width / 100; };
+    }).catch(function () { /* sans la police : règle approchée ci-dessous */ });
+  } catch (e) { /* idem */ }
+
   function ligneFigee(l, decale) {
-    if (l.length > LIGNE_COURTE) return l;
-    return (decale ? RETRAIT : '') + l.replace(/ /g, '\u00a0');
+    var insec = function (t) { return t.replace(/ /g, '\u00a0'); };
+    var prefixe = decale ? RETRAIT : '';
+    if (!mesurer) return l.length > 90 ? l : prefixe + insec(l);
+    if (mesurer(l) <= LARGEUR_LIGNE) return prefixe + insec(l);
+    // Coupure des lignes comme le PGI (au plus grand nombre de mots qui tiennent)
+    var mots = l.split(' '), debut = 0, i = 1;
+    for (; i < mots.length; i++) {
+      if (mesurer(mots.slice(debut, i + 1).join(' ')) > LARGEUR_LIGNE) debut = i;
+    }
+    return mots.slice(0, debut).join(' ') + (debut ? ' ' : '') + insec(mots.slice(debut).join(' '));
   }
 
   async function copierTexte(t, lettre, variante) {
