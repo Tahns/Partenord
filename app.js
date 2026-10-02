@@ -318,10 +318,13 @@
         }).join('') + '</body></html>';
     }
     if (variante === 'paragraphes') {
-      // Un paragraphe <p> justifié par ligne (le PGI y met un grand interligne)
+      // Un vrai paragraphe <p> par ligne, comme les courriers tapés dans le PGI ;
+      // interligne simple et espacements nuls écrits de toutes les façons courantes.
       return lignes.map(function (l, i) {
-        var style = 'margin:0cm;margin-top:0cm;margin-bottom:0cm;text-indent:0cm;line-height:normal;' + police +
-          (decale(l, i) ? 'text-align:left;margin-left:' + DECALAGE : 'text-align:justify');
+        var style = 'margin:0pt 0pt 0pt ' + (decale(l, i) ? DECALAGE : '0pt') + ';margin-top:0pt;margin-bottom:0pt;' +
+          'mso-margin-top-alt:0pt;mso-margin-bottom-alt:0pt;mso-para-margin:0pt;text-indent:0pt;' +
+          'line-height:100%;mso-line-height-rule:exactly;' + police +
+          'text-align:' + (decale(l, i) ? 'left' : 'justify');
         return '<p style="' + style + '">' + (l.trim() ? echapper(l) : '&nbsp;') + '</p>';
       }).join('');
     }
