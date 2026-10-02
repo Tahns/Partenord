@@ -296,12 +296,8 @@
     return t;
   }
 
-  // Copie en texte brut et en HTML. Dans la version HTML, chaque ligne est un vrai
-  // paragraphe (<p>), pour que le PGI justifie le texte sans étirer la dernière ligne ;
-  // ses marges sont écrites en cm, sinon le PGI ajoute son grand espace entre paragraphes.
-  // Pour une lettre, la date et la signature sont décalées vers la droite.
-  // Les variantes B, C et D (encadré « Essais de collage ») servent à trouver le format
-  // que le PGI respecte.
+  // Copie en texte brut et en HTML (le PGI lit le HTML). Les variantes de l'encadré
+  // « Essais de collage » servent à trouver le format que le PGI respecte le mieux.
   var DECALAGE = '9cm';
   function aDecaler(lignes, lettre) {
     var debutSignature = lignes.length;
@@ -321,17 +317,21 @@
             (l.trim() ? echapper(l) : '&nbsp;') + '<o:p></o:p></p>';
         }).join('') + '</body></html>';
     }
-    if (variante === 'gauche') {
-      // Un seul paragraphe aligné à gauche ; date et signature décalées par des tabulations
-      return '<p style="margin:0cm;text-align:left;' + police + '">' + lignes.map(function (l, i) {
-        return (decale(l, i) ? '<span style="mso-tab-count:7;white-space:pre">\t\t\t\t\t\t\t</span>' : '') + echapper(l);
-      }).join('<br>') + '</p>';
+    if (variante === 'paragraphes') {
+      // Un paragraphe <p> justifié par ligne (le PGI y met un grand interligne)
+      return lignes.map(function (l, i) {
+        var style = 'margin:0cm;margin-top:0cm;margin-bottom:0cm;text-indent:0cm;line-height:normal;' + police +
+          (decale(l, i) ? 'text-align:left;margin-left:' + DECALAGE : 'text-align:justify');
+        return '<p style="' + style + '">' + (l.trim() ? echapper(l) : '&nbsp;') + '</p>';
+      }).join('');
     }
-    return lignes.map(function (l, i) {
-      var style = 'margin:0cm;margin-top:0cm;margin-bottom:0cm;text-indent:0cm;line-height:normal;' + police +
-        (decale(l, i) ? 'text-align:left;margin-left:' + DECALAGE : 'text-align:justify');
-      return '<p style="' + style + '">' + (l.trim() ? echapper(l) : '&nbsp;') + '</p>';
-    }).join('');
+    // Format par défaut : un bloc <div> aligné à gauche par ligne. Le PGI les colle en
+    // un seul paragraphe à lignes serrées, sans grand espace ; la date et la signature
+    // sont décalées par des tabulations.
+    return '<div style="' + police + '">' + lignes.map(function (l, i) {
+      var tab = decale(l, i) ? '<span style="mso-tab-count:7;white-space:pre">\t\t\t\t\t\t\t</span>' : '';
+      return '<div style="margin:0cm;text-indent:0cm;text-align:left">' + (l.trim() ? tab + echapper(l) : '&nbsp;') + '</div>';
+    }).join('') + '</div>';
   }
 
   async function copierTexte(t, lettre, variante) {
@@ -343,9 +343,9 @@
       // Texte seul, lignes séparées par le séparateur de paragraphe Unicode
       formats['text/plain'] = t.split('\n').join('\u2029');
     } else {
-      if (variante === 'gauche') {
+      if (!variante || variante === 'actuel') {
         var lignes = t.split('\n'), decale = aDecaler(lignes, lettre);
-        formats['text/plain'] = lignes.map(function (l, i) { return (decale(l, i) ? '\t\t\t\t\t\t\t' : '') + l; }).join('\n');
+        formats['text/plain'] = lignes.map(function (l, i) { return (decale(l, i) && l.trim() ? '\t\t\t\t\t\t\t' : '') + l; }).join('\n');
       }
       formats['text/html'] = versHtml(t, lettre, variante);
     }
