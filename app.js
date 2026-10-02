@@ -349,21 +349,22 @@
       }
       formats['text/html'] = versHtml(t, lettre, variante);
     }
-    // Écriture par l'événement « copy » d'abord : le HTML y est copié tel quel, alors que
-    // navigator.clipboard.write le réécrit.
-    var fait = false;
-    var ecrire = function (ev) {
-      Object.keys(formats).forEach(function (k) { ev.clipboardData.setData(k, formats[k]); });
-      ev.preventDefault();
-      fait = true;
-    };
-    document.addEventListener('copy', ecrire);
-    try { document.execCommand('copy'); } catch (e) { /* repli ci-dessous */ }
-    document.removeEventListener('copy', ecrire);
-    if (fait) return;
-    var items = {};
-    Object.keys(formats).forEach(function (k) { items[k] = new Blob([formats[k]], { type: k }); });
-    await navigator.clipboard.write([new ClipboardItem(items)]);
+    // navigator.clipboard.write d'abord : le navigateur y réécrit le HTML avec tous les
+    // styles calculés, et c'est cette version que le PGI colle sans grands espaces.
+    // L'événement « copy » (HTML copié tel quel) ne sert qu'en repli.
+    try {
+      var items = {};
+      Object.keys(formats).forEach(function (k) { items[k] = new Blob([formats[k]], { type: k }); });
+      await navigator.clipboard.write([new ClipboardItem(items)]);
+    } catch (e) {
+      var ecrire = function (ev) {
+        Object.keys(formats).forEach(function (k) { ev.clipboardData.setData(k, formats[k]); });
+        ev.preventDefault();
+      };
+      document.addEventListener('copy', ecrire);
+      document.execCommand('copy');
+      document.removeEventListener('copy', ecrire);
+    }
   }
 
   async function copier(partie) {
