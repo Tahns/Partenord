@@ -334,7 +334,7 @@
     // n'élargit pas. Le PGI ignore les tabulations : la date et la signature sont décalées
     // par des espaces insécables.
     return '<div style="' + police + '">' + lignes.map(function (l, i) {
-      return '<div style="margin:0cm;text-indent:0cm;text-align:left">' + (l.trim() ? echapper(ligneFigee(l, decale(l, i))) : '&nbsp;') + '</div>';
+      return '<div style="margin:0cm;text-indent:0cm;text-align:left">' + (l.trim() ? echapper(lettre ? ligneFigee(l, decale(l, i)) : l) : '&nbsp;') + '</div>';
     }).join('') + '</div>';
   }
 
@@ -356,6 +356,8 @@
     }).catch(function () { /* sans la police : règle approchée ci-dessous */ });
   } catch (e) { /* idem */ }
 
+  // Réservé aux lettres de réponse (modèle du PGI en Roboto 11) : le texte du pouvoir
+  // est collé dans une autre police, où ces fins de ligne figées déborderaient à droite.
   function ligneFigee(l, decale) {
     var insec = function (t) { return t.replace(/ /g, '\u00a0'); };
     var prefixe = decale ? RETRAIT : '';
@@ -380,7 +382,7 @@
     } else {
       if (!variante || variante === 'actuel') {
         var lignes = t.split('\n'), decale = aDecaler(lignes, lettre);
-        formats['text/plain'] = lignes.map(function (l, i) { return l.trim() ? ligneFigee(l, decale(l, i)) : l; }).join('\n');
+        formats['text/plain'] = lignes.map(function (l, i) { return l.trim() && lettre ? ligneFigee(l, decale(l, i)) : l; }).join('\n');
       }
       formats['text/html'] = versHtml(t, lettre, variante);
     }
