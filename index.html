@@ -280,10 +280,10 @@
     <div class="card">
       <h2><span class="num">3</span>Réponse</h2>
       <div class="actions">
-        <button type="button" class="primary" data-copie="tout">Copier tout le courrier</button>
+        <button type="button" class="primary" id="btn-word" title="Votre fichier Word de l'agence de Lille, avec son en-tête, dans lequel le texte est déposé">Télécharger le courrier sur tête de lettre (Word)</button>
+        <button type="button" data-copie="tout">Copier tout le courrier</button>
         <button type="button" data-copie="corps" title="À partir de la formule d'appel">Copier sans l'en-tête</button>
         <button type="button" data-copie="objet">Copier l'objet</button>
-        <button type="button" id="btn-word" title="Réponse sur la tête de lettre de l'agence, au format Word">Télécharger sur tête de lettre (Word)</button>
         <span class="ok" id="copie-ok" aria-live="polite"></span>
       </div>
       <details class="essais">
@@ -297,6 +297,7 @@
         </div>
       </details>
       <div id="lettre"></div>
+      <p class="aide">Cet aperçu montre le texte seul. Le fichier Word téléchargé est votre modèle d'agence (logo, adresse de l'agence, pied de page), où seuls le destinataire, la date, l'objet, le texte et la signature sont ajoutés.</p>
       <p class="aide">Surligné en vert : informations reprises du courrier. En rouge : information manquante à compléter.</p>
     </div>
   </section>
