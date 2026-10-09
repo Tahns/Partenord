@@ -72,7 +72,10 @@
   // Message d'avancement dans l'onglet affiché
   function etat(html) { ($('vue-logement').hidden ? $('c-etat') : $('etat')).innerHTML = html; }
 
-  async function ocr(images) {
+  async function ocr(images) { return (await ocrPages(images)).join('\n'); }
+
+  // Texte lu page par page
+  async function ocrPages(images) {
     if (!worker) {
       etat('Chargement de la reconnaissance de texte (première fois : quelques secondes)… <progress></progress>');
       // Tout est servi par le site lui-même (dossier vendor/) : aucun appel à un service externe
@@ -87,28 +90,31 @@
         }
       });
     }
-    var texte = '';
+    var pages = [];
     for (var i = 0; i < images.length; i++) {
       etat('Lecture de la page ' + (i + 1) + '/' + images.length + '… <progress></progress>');
       var r = await worker.recognize(images[i]);
-      texte += r.data.text + '\n';
+      pages.push(r.data.text);
     }
-    return texte;
+    return pages;
   }
 
-  async function lirePdf(buffer) {
+  async function lirePdf(buffer) { return (await lirePdfPages(buffer, 5)).join('\n'); }
+
+  // Un texte par page ; un PDF de plusieurs courriers scannés à la suite est lu en entier (30 pages au plus)
+  async function lirePdfPages(buffer, max) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
     var pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-    var nb = Math.min(pdf.numPages, 5);
-    var texte = '', pages = [];
+    var nb = Math.min(pdf.numPages, max || 30);
+    var textes = [], pages = [];
     for (var i = 1; i <= nb; i++) {
       var page = await pdf.getPage(i);
       var contenu = await page.getTextContent();
-      texte += contenu.items.map(function (it) { return it.str + (it.hasEOL ? '\n' : ' '); }).join('') + '\n';
+      textes.push(contenu.items.map(function (it) { return it.str + (it.hasEOL ? '\n' : ' '); }).join('') + '\n');
       pages.push(page);
     }
     // PDF texte : pas besoin d'OCR
-    if (texte.replace(/\s/g, '').length > 300) return texte;
+    if (textes.join('').replace(/\s/g, '').length > 300) return textes;
     var images = [];
     for (var j = 0; j < pages.length; j++) {
       var vp = pages[j].getViewport({ scale: 2.5 });
@@ -117,7 +123,7 @@
       await pages[j].render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
       images.push(canvas);
     }
-    return ocr(images);
+    return ocrPages(images);
   }
 
   // ---------- File de courriers ----------
@@ -158,7 +164,7 @@
   // Champs proposés pour un texte de courrier (sans toucher à la page)
   function champsDepuisTexte(texte, nomFichier) {
     // Le signataire et la personne qui suit l'affaire ne sont jamais le demandeur
-    var r = L.extraire(texte, { exclus: [reglages.signature.split('\n')[0], reglages.suiviPar.split(' - ')[0]] });
+    var r = L.extraire(texte, { exclus: [reglages.signature.split('\n')[0], reglages.suiviPar.split(' - ')[0], 'Hicham', 'Hicham KHALFI', 'Cathy CLAIRON', 'Cathy'] });
     // Agence rattachée à la commune souhaitée
     var agence = $('agence').value;
     var lieu = (r.lieu || '').replace(/\s(?:ou|et)\s.*$/, '').toLowerCase();
@@ -180,6 +186,7 @@
   function afficherListe() {
     var ul = $('liste-courriers');
     $('bloc-courriers').hidden = courriers.length < 2 && !courriers.some(function (c) { return c.statut !== 'pret'; });
+    $('btn-word-tout').hidden = courriers.filter(function (c) { return c.statut === 'pret'; }).length < 2;
     ul.innerHTML = '';
     courriers.forEach(function (c, i) {
       var li = document.createElement('li');
@@ -212,6 +219,11 @@
   async function lireFichier(f) {
     return /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name) ? lirePdf(await f.arrayBuffer()) : ocr([f]);
   }
+  // Textes des courriers contenus dans le fichier (un PDF peut en réunir plusieurs)
+  async function lireCourriers(f) {
+    var pages = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name) ? await lirePdfPages(await f.arrayBuffer(), 30) : await ocrPages([f]);
+    return L.separerCourriers(pages);
+  }
 
   function ajouterFichiers(liste) {
     Array.prototype.forEach.call(liste || [], function (f, rang) {
@@ -222,9 +234,18 @@
         c.statut = 'lecture'; afficherListe();
         etat('Ouverture de « ' + echapperHtml(f.name) + ' »…');
         try {
-          var texte = await lireFichier(f);
-          c.champs = champsDepuisTexte(texte, f.name);
+          var textes = await lireCourriers(f);
+          var n = textes.length;
+          c.champs = champsDepuisTexte(textes[0], n > 1 ? null : f.name);
           c.statut = 'pret';
+          if (n > 1) {
+            // Plusieurs courriers à la suite dans le même PDF : un courrier par entrée de la liste
+            c.nom = f.name + ' — courrier 1/' + n;
+            var suite = textes.slice(1).map(function (t, k) {
+              return { nom: f.name + ' — courrier ' + (k + 2) + '/' + n, statut: 'pret', copie: false, champs: champsDepuisTexte(t, null) };
+            });
+            Array.prototype.splice.apply(courriers, [courriers.indexOf(c) + 1, 0].concat(suite));
+          }
         } catch (e) {
           console.error(e);
           c.statut = 'erreur'; c.erreur = String(e.message || e);
@@ -416,34 +437,83 @@
 
   // Réponse sur la tête de lettre de l'agence (modèle Word déposé dans modeles/)
   var modeleWord = null;
+  async function chargerModeleWord() {
+    if (!modeleWord) {
+      var rep = await fetch('modeles/tete-de-lettre-lille.docx');
+      if (!rep.ok) throw new Error('modèle introuvable');
+      modeleWord = new Uint8Array(await rep.arrayBuffer());
+    }
+    return modeleWord;
+  }
+
+  // Word du courrier affiché dans le formulaire : { octets, nom }
+  async function fabriquerWord() {
+    var octets = await window.TeteDeLettre.remplir(await chargerModeleWord(),
+      { destinataire: $('destinataire').value, texte: texteFinal('tout') }, window.Conciliation.zip);
+    // nom de famille = mots en capitales, sinon dernier mot de la désignation
+    var mots = $('designation').value.trim().split(/\s+/).slice(1);
+    var nom = (mots.filter(function (w) { return w.length > 1 && w === w.toUpperCase(); }).join(' ') || mots.pop() || 'courrier').replace(/[^\wÀ-ÿ' -]/g, '');
+    return { octets: octets, nom: 'Réponse - ' + nom + '.docx' };
+  }
+
+  function enregistrer(octets, nomFichier, type) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([octets], { type: type }));
+    a.download = nomFichier;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+  var TYPE_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+  function messageWord(msg) {
+    $('copie-ok').textContent = msg;
+    setTimeout(function () { $('copie-ok').textContent = ''; }, 8000);
+  }
+
   async function telechargerWord() {
-    var T = window.TeteDeLettre;
     try {
-      if (!modeleWord) {
-        var rep = await fetch('modeles/tete-de-lettre-lille.docx');
-        if (!rep.ok) throw new Error('modèle introuvable');
-        modeleWord = new Uint8Array(await rep.arrayBuffer());
-      }
-      var octets = await T.remplir(modeleWord, { destinataire: $('destinataire').value, texte: texteFinal('tout') }, window.Conciliation.zip);
-      // nom de famille = mots en capitales, sinon dernier mot de la désignation
-      var mots = $('designation').value.trim().split(/\s+/).slice(1);
-      var nom = (mots.filter(function (w) { return w.length > 1 && w === w.toUpperCase(); }).join(' ') || mots.pop() || 'courrier').replace(/[^\wÀ-ÿ' -]/g, '');
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([octets], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-      a.download = 'Réponse - ' + nom + '.docx';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-      $('copie-ok').textContent = '✓ Fichier Word téléchargé';
+      var w = await fabriquerWord();
+      enregistrer(w.octets, w.nom, TYPE_DOCX);
       if (actif >= 0 && courriers[actif]) { courriers[actif].copie = true; afficherListe(); }
+      messageWord('✓ Fichier Word téléchargé');
     } catch (e) {
       console.error(e);
-      $('copie-ok').textContent = 'Word impossible : ' + (e.message || e);
+      messageWord('Word impossible : ' + (e.message || e));
     }
-    setTimeout(function () { $('copie-ok').textContent = ''; }, 3000);
+  }
+
+  // Un Word par courrier lu, réunis dans une archive .zip
+  async function telechargerTout() {
+    var avant = actif;
+    try {
+      if (actif >= 0 && courriers[actif] && courriers[actif].statut === 'pret') courriers[actif].champs = lireChamps();
+      var fichiers = {}, vus = {}, n = 0, incomplets = 0;
+      for (var i = 0; i < courriers.length; i++) {
+        var c = courriers[i];
+        if (c.statut !== 'pret') continue;
+        ecrireChamps(c.champs);
+        var w = await fabriquerWord();
+        var nom = w.nom;
+        if (vus[nom]) nom = nom.replace(/\.docx$/, ' (' + (++vus[nom]) + ').docx'); else vus[nom] = 1;
+        fichiers[(i + 1 < 10 ? '0' : '') + (i + 1) + ' - ' + nom] = w.octets;
+        c.copie = true; n++;
+        if (!c.champs.typologie.trim() || !c.champs.designation.trim()) incomplets++;
+      }
+      if (!n) throw new Error('aucun courrier lu');
+      enregistrer(window.Conciliation.zip(fichiers), 'Réponses.zip', 'application/zip');
+      messageWord('✓ ' + n + ' fichier' + (n > 1 ? 's' : '') + ' Word dans Réponses.zip' +
+        (incomplets ? ' — ⚠ ' + incomplets + ' à compléter ([TYPE] ou [DEMANDEUR] à remplacer)' : ''));
+    } catch (e) {
+      console.error(e);
+      messageWord('Word impossible : ' + (e.message || e));
+    }
+    if (avant >= 0 && courriers[avant] && courriers[avant].champs) ecrireChamps(courriers[avant].champs);
+    afficherListe();
   }
 
   // ---------- Événements ----------
   $('btn-word').addEventListener('click', telechargerWord);
+  $('btn-word-tout').addEventListener('click', telechargerTout);
   var drop = $('drop');
   drop.addEventListener('click', function () { $('fichier').click(); });
   drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fichier').click(); } });

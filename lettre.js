@@ -444,7 +444,20 @@
     return lignes.join('\n');
   }
 
-  var api = { PROFILS: PROFILS, FONCTIONS: FONCTIONS, CRITERES: CRITERES, extraire: extraire, generer: generer, normaliser: normaliser, dateLongue: dateLongue };
+  // ---------- Plusieurs courriers dans un même PDF ----------
+  // Une page ouvre un nouveau courrier quand elle contient une formule d'appel seule sur sa
+  // ligne (« Monsieur le Directeur, », « Madame, Monsieur, ») ; sinon elle prolonge le précédent.
+  var APPEL_LIGNE = /^\s*(?:Madame,?\s+Monsieur|(?:Monsieur|Madame)\s+(?:le|la|l')\s?[A-Za-zÀ-ÿ' ]{3,40})\s*,\s*$/m;
+  function separerCourriers(pages) {
+    var groupes = [];
+    pages.forEach(function (p, i) {
+      if (!groupes.length || (i > 0 && APPEL_LIGNE.test(p))) groupes.push([p]);
+      else groupes[groupes.length - 1].push(p);
+    });
+    return groupes.map(function (g) { return g.join('\n'); });
+  }
+
+  var api = { separerCourriers: separerCourriers, PROFILS: PROFILS, FONCTIONS: FONCTIONS, CRITERES: CRITERES, extraire: extraire, generer: generer, normaliser: normaliser, dateLongue: dateLongue };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Lettre = api;
 })(this);

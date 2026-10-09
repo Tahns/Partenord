@@ -209,3 +209,16 @@ assert.ok(sh(['en rez-de-chaussée', 'avec ascenseur']).includes('type 3 en rez-
 assert.deepEqual(L.extraire('Monsieur RAHMANI Sarnir 16 rue X. ma demande, ma situation. RAHMANI Samir').variantes, ['Samir']);
 assert.deepEqual(L.extraire('la demande de Monsieur Nordine Lounis. Monsieur Lounis aspire à stabiliser').variantes, []);
 console.log('OK');
+
+// PDF de plusieurs courriers : une page ouvre un courrier quand elle contient une formule d'appel seule sur sa ligne
+const pagesPdf = [
+  'Lomme, le 14 septembre 2026\nMonsieur le Directeur,\nJ\'ai été sollicité par Madame Dupont.',
+  'Lomme, le 15 septembre 2026\nMonsieur le Directeur,\nJ\'ai été sollicité par Monsieur Martin.',
+  'Suite du courrier.\nJe vous prie de croire, Monsieur le Directeur, à l\'assurance de mes sentiments.',
+  'Hôtel de Ville\nMadame, Monsieur,\nAutre courrier.'
+];
+const sep = L.separerCourriers(pagesPdf);
+assert.equal(sep.length, 3);
+assert.ok(sep[1].includes('Suite du courrier'));
+assert.equal(L.separerCourriers(['texte seul']).length, 1);
+console.log('OK séparation des courriers');

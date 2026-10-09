@@ -11,7 +11,9 @@ Deux onglets :
 Outil web pour rédiger en quelques secondes la réponse à un courrier d'élu
 (maire, député…) concernant une demande de logement.
 
-1. Glisser un ou plusieurs courriers (PDF scanné, PDF texte ou photo) dans la page :
+1. Glisser un ou plusieurs courriers (PDF scanné, PDF texte ou photo) dans la page ; un PDF qui réunit
+   plusieurs courriers à la suite est découpé automatiquement (un courrier par entrée de la liste, bouton
+   « Tout télécharger sur tête de lettre » pour obtenir tous les Word dans un .zip) :
    chacun apparaît dans une liste, garde ses propres champs et est marqué « ✓ copié » une fois la réponse copiée.
 2. Le texte est lu (OCR en français) et l'outil repère automatiquement :
    demandeur(s) et civilité, numéro unique, typologie, commune souhaitée,
