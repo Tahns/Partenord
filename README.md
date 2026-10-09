@@ -18,7 +18,10 @@ Outil web pour rédiger en quelques secondes la réponse à un courrier d'élu
    critères (métro, rez-de-chaussée…), fonction de l'auteur du courrier.
 3. Vérifier / corriger les champs : la réponse se met à jour en direct,
    avec tous les accords (Monsieur, Madame, Monsieur et Madame, Messieurs, Mesdames).
-4. Copier le texte et le coller dans le PGI.
+4. Copier le texte et le coller dans le PGI, ou « Télécharger sur tête de lettre (Word) » :
+   la réponse est déposée sur le modèle de l'agence (`modeles/tete-de-lettre-lille.docx`) avec
+   l'adresse du destinataire (champ « Destinataire », repris du courrier pour les élus connus
+   dans `tete-de-lettre.js`), la date, l'objet, le texte et « #signature# ».
 
 Les réglages (Affaire suivie par, signature, agences avec adresse, horaires
 et communes rattachées) se font via le bouton « Réglages ». Ils valent jusqu'à la
@@ -67,6 +70,9 @@ La page est marquée `noindex` : elle n'apparaît pas dans les moteurs de recher
 - `lettre.js` : extraction des informations et modèle de réponse (c'est ici qu'on modifie le texte type).
 - `vendor/` : pdf.js 3.11.174, Tesseract.js 5.1.1 et données françaises (licence Apache 2.0).
 - `conciliation.js` / `conciliation-app.js` : onglet Conciliations (extraction, texte du pouvoir, fichier Word).
+- `tete-de-lettre.js` : remplit le modèle Word de la tête de lettre (destinataires connus, découpage du texte).
+- `modeles/tete-de-lettre-lille.docx` : tête de lettre de l'agence de Lille.
 - `modeles/logo-partenord-habitat.png` : logo placé en haut du pouvoir.
-- `test/test.js`, `test/test-conciliation.js` : tests (`node test/test.js && node test/test-conciliation.js`).
+- `test/test.js`, `test/test-conciliation.js`, `test/test-tete-de-lettre.js` : tests
+  (`node test/test.js && node test/test-conciliation.js && node test/test-tete-de-lettre.js`).
   Les exemples tirés de courriers réels y sont **anonymisés** : ne jamais y mettre de vrais noms ou numéros.

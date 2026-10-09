@@ -245,6 +245,9 @@
         </div>
       </div>
 
+      <label for="destinataire">Destinataire <small>(adresse en haut à droite de la lettre Word ; reprise du courrier si l'auteur est connu)</small></label>
+      <textarea id="destinataire" rows="4" placeholder="Monsieur Prénom NOM&#10;Fonction&#10;Adresse&#10;Code postal VILLE"></textarea>
+
       <div class="row">
         <div>
           <label for="nature">Nature</label>
@@ -279,6 +282,7 @@
         <button type="button" class="primary" data-copie="tout">Copier tout le courrier</button>
         <button type="button" data-copie="corps" title="À partir de la formule d'appel">Copier sans l'en-tête</button>
         <button type="button" data-copie="objet">Copier l'objet</button>
+        <button type="button" id="btn-word" title="Réponse sur la tête de lettre de l'agence, au format Word">Télécharger sur tête de lettre (Word)</button>
         <span class="ok" id="copie-ok" aria-live="polite"></span>
       </div>
       <details class="essais">
@@ -399,6 +403,7 @@
 <script src="lettre.js"></script>
 <script src="app.js"></script>
 <script src="conciliation.js"></script>
+<script src="tete-de-lettre.js"></script>
 <script src="conciliation-app.js"></script>
 </body>
 </html>

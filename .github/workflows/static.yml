@@ -26,6 +26,7 @@ jobs:
           node-version: 22
       - run: node test/test.js
       - run: node test/test-conciliation.js
+      - run: node test/test-tete-de-lettre.js
 
   deploy:
     needs: tests
@@ -40,7 +41,7 @@ jobs:
       - name: Préparer les fichiers du site
         run: |
           mkdir _site
-          cp -r index.html verrou.js app.js lettre.js conciliation.js conciliation-app.js favicon.svg logo.svg vendor modeles _site/
+          cp -r index.html verrou.js app.js lettre.js conciliation.js conciliation-app.js tete-de-lettre.js favicon.svg logo.svg vendor modeles _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

@@ -131,6 +131,7 @@
       designation: $('designation').value, numero: $('numero').value, typologie: $('typologie').value,
       lieu: $('lieu').value, critereLibre: $('critere-libre').value, fonction: $('fonction').value,
       nature: $('nature').value, agence: $('agence').value, reference: $('reference').value, date: $('date').value,
+      destinataire: $('destinataire').value,
       profil: document.querySelector('input[name=profil]:checked').value,
       elu: document.querySelector('input[name=elu]:checked').value,
       criteres: Array.prototype.map.call(document.querySelectorAll('#criteres input:checked'), function (cb) { return cb.value; }),
@@ -142,6 +143,7 @@
   function ecrireChamps(c) {
     champsCourants = c;
     ['designation', 'numero', 'typologie', 'lieu', 'fonction', 'nature', 'reference', 'date'].forEach(function (id) { $(id).value = c[id]; });
+    $('destinataire').value = c.destinataire || '';
     $('critere-libre').value = c.critereLibre;
     if (reglages.agences[c.agence]) $('agence').value = c.agence;
     document.querySelector('input[name=profil][value=' + c.profil + ']').checked = true;
@@ -169,6 +171,7 @@
       designation: r.designation, numero: r.numero, typologie: r.typologie, lieu: r.lieu, critereLibre: '',
       fonction: r.fonction, nature: r.mutation ? 'mutation' : 'logement', agence: agence,
       reference: ref ? ref[1] : (nomFichier ? '' : $('reference').value), date: $('date').value,
+      destinataire: window.TeteDeLettre ? window.TeteDeLettre.destinataireDepuisTexte(texte) : '',
       profil: r.profil, elu: r.elueFem ? 'f' : 'm', criteres: r.criteres, texte: texte,
       alerte: r.variantes && r.variantes.length ? 'Orthographe à vérifier : le courrier écrit aussi « ' + r.variantes.join(' », « ') + ' ».' : ''
     };
@@ -279,7 +282,7 @@
       .replace(/\u0001([^\u0002]*)\u0002/g, '<span class="var">$1</span>')
       .replace(/\[(DEMANDEUR|TYPE|AGENCE)\]/g, '<span class="trou">[$1]</span>');
     $('lettre').innerHTML = html;
-    ['designation', 'numero', 'typologie', 'lieu'].forEach(function (id) {
+    ['designation', 'numero', 'typologie', 'lieu', 'destinataire'].forEach(function (id) {
       $(id).classList.toggle('manquant', !$(id).value.trim());
     });
   }
@@ -411,7 +414,36 @@
     setTimeout(function () { $('copie-ok').textContent = ''; }, 2000);
   }
 
+  // Réponse sur la tête de lettre de l'agence (modèle Word déposé dans modeles/)
+  var modeleWord = null;
+  async function telechargerWord() {
+    var T = window.TeteDeLettre;
+    try {
+      if (!modeleWord) {
+        var rep = await fetch('modeles/tete-de-lettre-lille.docx');
+        if (!rep.ok) throw new Error('modèle introuvable');
+        modeleWord = new Uint8Array(await rep.arrayBuffer());
+      }
+      var octets = await T.remplir(modeleWord, { destinataire: $('destinataire').value, texte: texteFinal('tout') }, window.Conciliation.zip);
+      // nom de famille = mots en capitales, sinon dernier mot de la désignation
+      var mots = $('designation').value.trim().split(/\s+/).slice(1);
+      var nom = (mots.filter(function (w) { return w.length > 1 && w === w.toUpperCase(); }).join(' ') || mots.pop() || 'courrier').replace(/[^\wÀ-ÿ' -]/g, '');
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([octets], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+      a.download = 'Réponse - ' + nom + '.docx';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      $('copie-ok').textContent = '✓ Fichier Word téléchargé';
+      if (actif >= 0 && courriers[actif]) { courriers[actif].copie = true; afficherListe(); }
+    } catch (e) {
+      console.error(e);
+      $('copie-ok').textContent = 'Word impossible : ' + (e.message || e);
+    }
+    setTimeout(function () { $('copie-ok').textContent = ''; }, 3000);
+  }
+
   // ---------- Événements ----------
+  $('btn-word').addEventListener('click', telechargerWord);
   var drop = $('drop');
   drop.addEventListener('click', function () { $('fichier').click(); });
   drop.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('fichier').click(); } });

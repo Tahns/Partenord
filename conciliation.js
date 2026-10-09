@@ -299,7 +299,7 @@
     return zip(f);
   }
 
-  var api = { DEFAUT: DEFAUT, extraire: extraire, mandataireConnu: mandataireConnu, pouvoir: pouvoir, pouvoirTexte: pouvoirTexte, docx: docx, dateCourte: dateCourte };
+  var api = { DEFAUT: DEFAUT, extraire: extraire, mandataireConnu: mandataireConnu, pouvoir: pouvoir, pouvoirTexte: pouvoirTexte, docx: docx, zip: zip, dateCourte: dateCourte };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Conciliation = api;
 })(this);
